@@ -249,7 +249,7 @@
         setInterval(updateClock, 1000);
         updateClock();
 
-        // 2. 特別交通消息 API (直接讀取運輸署官方 XML)
+        // 2. 特別交通消息 API
         var newsList = [];
         var currentNewsIndex = 0;
 
@@ -271,13 +271,8 @@
                     }
                 }
                 
-                if (loadedNews.length > 0) {
-                    newsList = loadedNews;
-                } else {
-                    newsList = ["目前全港交通情況大致正常，暫無特別交通消息。"];
-                }
+                newsList = loadedNews.length > 0 ? loadedNews : ["目前全港交通情況大致正常，暫無特別交通消息。"];
             } catch (e) {
-                console.error("Traffic news fetch error:", e);
                 newsList = ["目前全港交通情況大致正常，暫無特別交通消息。"];
             }
             showNextNews();
@@ -298,9 +293,8 @@
         setInterval(showNextNews, 3000);
         setInterval(fetchTrafficNews, 300000);
 
-        // 3. 即時天氣 API (rhrread) + 9天預報 API (fnd)
+        // 3. 即時天氣 API + 9天預報 API
         async function fetchWeather() {
-            // A. 即時溫度與濕度
             try {
                 const res = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=tc');
                 const data = await res.json();
@@ -312,7 +306,6 @@
                 }
             } catch(e) { console.error("rhrread error:", e); }
 
-            // B. 未來 9 天預報
             try {
                 const resFnd = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=fnd&lang=tc');
                 const fndData = await resFnd.json();
@@ -326,31 +319,29 @@
 
                     let forecastHtml = '';
                     fndData.weatherForecast.forEach(day => {
-    const dateStr = day.forecastDate ? (day.forecastDate.substring(4, 6) + '/' + day.forecastDate.substring(6, 8)) : '--';
-    
-    // 1. 修正 Icon 編號：天文台圖案編號通常為 2 位數，不足 2 位自動補 0（如 50, 60, 05 等）
-    let iconNum = day.ForecastIcon || 50;
-    let iconStr = String(iconNum).padStart(2, '0');
-    
-    // 2. 使用天文台官方穩定開放數據 CDN 網址
-    const iconUrl = `https://www.hko.gov.hk/images/HKOWebIcon/pic${iconStr}.png`;
+                        const dateStr = day.forecastDate ? (day.forecastDate.substring(4, 6) + '/' + day.forecastDate.substring(6, 8)) : '--';
+                        
+                        // 圖示網址修復：使用天文台官方 WebIcon 主站 CDN 路徑，並兼具補零與 fallback
+                        let rawIcon = day.ForecastIcon || 50;
+                        let iconUrl = `https://www.hko.gov.hk/images/HKOWebIcon/pic${rawIcon}.png`;
 
-    const dMin = day.forecastMintemp ? day.forecastMintemp.value : '--';
-    const dMax = day.forecastMaxtemp ? day.forecastMaxtemp.value : '--';
-    const rhMin = day.forecastMinrh ? day.forecastMinrh.value : '--';
-    const rhMax = day.forecastMaxrh ? day.forecastMaxrh.value : '--';
+                        const dMin = day.forecastMintemp ? day.forecastMintemp.value : '--';
+                        const dMax = day.forecastMaxtemp ? day.forecastMaxtemp.value : '--';
+                        const rhMin = day.forecastMinrh ? day.forecastMinrh.value : '--';
+                        const rhMax = day.forecastMaxrh ? day.forecastMaxrh.value : '--';
 
-    forecastHtml += `
-        <div class="forecast-card">
-            <div class="forecast-date">${dateStr}</div>
-            <div class="forecast-week">${day.week || ''}</div>
-            <img src="${iconUrl}" width="38" height="38" alt="weather icon" onerror="this.onerror=null; this.src='https://www.hko.gov.hk/images/HKOWebIcon/pic50.png';">
-            <div class="forecast-temp">${dMin}° - ${dMax}°C</div>
-            <div class="forecast-rh">${rhMin}% - ${rhMax}%</div>
-            <div class="forecast-psr">${day.PSR || ''}</div>
-        </div>
-    `;
-});
+                        forecastHtml += `
+                            <div class="forecast-card">
+                                <div class="forecast-date">${dateStr}</div>
+                                <div class="forecast-week">${day.week || ''}</div>
+                                <img src="${iconUrl}" width="38" height="38" alt="weather icon" 
+                                     onerror="if(!this.dataset.tried){this.dataset.tried=1; this.src='https://www.hko.gov.hk/images/HKOWebIcon/pic${String(rawIcon).padStart(2,'0')}.png';}else{this.src='https://www.hko.gov.hk/images/HKOWebIcon/pic50.png';}">
+                                <div class="forecast-temp">${dMin}° - ${dMax}°C</div>
+                                <div class="forecast-rh">${rhMin}% - ${rhMax}%</div>
+                                <div class="forecast-psr">${day.PSR || ''}</div>
+                            </div>
+                        `;
+                    });
                     document.getElementById('forecast-container').innerHTML = forecastHtml;
                 }
             } catch(e) { 
@@ -386,10 +377,10 @@
         fetchBusEta();
         setInterval(fetchBusEta, 30000);
 
-        // 5. 港鐵 API (屯馬綫 - 屯門站 TUM 分別顯示出發與到達)
+        // 5. 港鐵 API (屯馬綫 - 屯門站 TUM)
         async function fetchMtrEta() {
-            const line = 'TML'; // 屯馬綫官方代號
-            const sta = 'TUM';  // 屯門站
+            const line = 'TML'; 
+            const sta = 'TUM';  
             try {
                 const res = await fetch(`https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php?line=${line}&sta=${sta}&lang=TC`);
                 const data = await res.json();
@@ -400,21 +391,28 @@
                 if (data.status === 1 && data.data && data.data[`${line}-${sta}`]) {
                     const stationData = data.data[`${line}-${sta}`];
                     
-                    // A. 由屯門站出發（UP 陣列 - 開往烏溪沙）
-                    const departures = (stationData.UP || []).sort((a, b) => parseInt(a.ttnt || 0) - parseInt(b.ttnt || 0));
-                    if (departures.length > 0) {
-                        departures.slice(0, 2).forEach(train => {
+                    const upTrains = stationData.UP || [];
+                    const downTrains = stationData.DOWN || [];
+
+                    // 1. 出發班次（只要目的地不是屯門，或帶有目的地 WKS/烏溪沙，均屬開往烏溪沙的出發班次）
+                    let departureList = [...upTrains, ...downTrains].filter(t => t.dest !== 'TUM');
+                    departureList.sort((a, b) => parseInt(a.ttnt || 0) - parseInt(b.ttnt || 0));
+
+                    if (departureList.length > 0) {
+                        departureList.slice(0, 2).forEach(train => {
                             const min = (train.ttnt && train.ttnt !== "0") ? `${train.ttnt} 分鐘` : '即將開出';
-                            let dest = train.dest === 'WKS' ? '烏溪沙' : (train.dest || '烏溪沙');
+                            let dest = (train.dest === 'WKS' || !train.dest) ? '烏溪沙' : train.dest;
                             const plat = train.plat || '1';
                             depHtml += `<div class="eta-box mtr-box"><span class="route-name">往 ${dest} (${plat}號月台)</span><span class="eta-time">${min}</span></div>`;
                         });
                     }
 
-                    // B. 到達屯門站（DOWN 陣列 - 終點站落客）
-                    const arrivals = (stationData.DOWN || []).sort((a, b) => parseInt(a.ttnt || 0) - parseInt(b.ttnt || 0));
-                    if (arrivals.length > 0) {
-                        arrivals.slice(0, 2).forEach(train => {
+                    // 2. 到達班次（目的地標註為 TUM 屯門的進站列車）
+                    let arrivalList = [...upTrains, ...downTrains].filter(t => t.dest === 'TUM');
+                    arrivalList.sort((a, b) => parseInt(a.ttnt || 0) - parseInt(b.ttnt || 0));
+
+                    if (arrivalList.length > 0) {
+                        arrivalList.slice(0, 2).forEach(train => {
                             const min = (train.ttnt && train.ttnt !== "0") ? `${train.ttnt} 分鐘` : '即將到站';
                             const plat = train.plat || '2';
                             arrHtml += `<div class="eta-box mtr-box"><span class="route-name">列車進站 (${plat}號月台)</span><span class="eta-time">${min}</span></div>`;
@@ -422,8 +420,8 @@
                     }
                 }
                 
-                document.getElementById('mtr-departures-container').innerHTML = depHtml || '<div style="color:#8b949e; font-size:0.85rem;">暫無出發班次</div>';
-                document.getElementById('mtr-arrivals-container').innerHTML = arrHtml || '<div style="color:#8b949e; font-size:0.85rem;">暫無到達班次</div>';
+                document.getElementById('mtr-departures-container').innerHTML = depHtml || '<div style="color:#8b949e; font-size:0.85rem;">目前無出發班次</div>';
+                document.getElementById('mtr-arrivals-container').innerHTML = arrHtml || '<div style="color:#8b949e; font-size:0.85rem;">目前無到站班次</div>';
             } catch(e) {
                 console.error("MTR error:", e);
                 document.getElementById('mtr-departures-container').innerText = '數據加載失敗';
