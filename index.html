@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Dashboard</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background-color: #fff0f3;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #333;
+        }
+        .card {
+            background: #ffffff;
+            padding: 30px 40px;
+            border-radius: 20px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+        .date {
+            font-size: 1.2rem;
+            color: #ff758f;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        .clock {
+            font-size: 3.5rem;
+            font-weight: bold;
+            color: #0077b6;
+            letter-spacing: 2px;
+            margin-bottom: 15px;
+        }
+        .status {
+            display: inline-block;
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <div class="date" id="date-display">2026年--月--日</div>
+        <div class="clock" id="clock-display">00:00:00</div>
+        <div class="status">Dashboard 測試成功！</div>
+    </div>
+
+    <script>
+        function updateDashboard() {
+            var now = new Date();
+            
+            // 格式化日期
+            var year = now.getFullYear();
+            var month = String(now.getMonth() + 1).padStart(2, '0');
+            var date = String(now.getDate()).padStart(2, '0');
+            var dayNames = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+            var day = dayNames[now.getDay()];
+            
+            document.getElementById('date-display').innerText = year + '年' + month + '月' + date + '日 (' + day + ')';
+
+            // 格式化時間 (HH:mm:ss)
+            var hours = String(now.getHours()).padStart(2, '0');
+            var minutes = String(now.getMinutes()).padStart(2, '0');
+            var seconds = String(now.getSeconds()).padStart(2, '0');
+            
+            document.getElementById('clock-display').innerText = hours + ':' + minutes + ':' + seconds;
+        }
+
+        // 每秒更新一次
+        setInterval(updateDashboard, 1000);
+        updateDashboard();
+    </script>
+
+</body>
+</html>
