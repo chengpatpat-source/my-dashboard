@@ -546,7 +546,7 @@ setInterval(fetchTrafficNews, 180000); // 每 3 分鐘更新一次
 
 
 // =========================================================
-// 5. 即時新聞 (直連天文台即時提示 API，100% 無跨域封鎖問題)
+// 5. 即時新聞 (採用 rss2json 穩定轉換源 + 多重備用)
 // =========================================================
 var newsHeaderList = [];
 var currentRthkIndex = 0;
@@ -554,50 +554,36 @@ var currentRthkIndex = 0;
 async function fetchRthkNews() {
     let titles = [];
 
-    // 1. 優先獲取香港天文台最新特別天氣提示與新聞（完全無 CORS 限制）
+    // 1. 優先使用 rss2json 讀取 RTHK RSS (免除 CORS 跨域封鎖)
     try {
-        const res = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=swt&lang=tc');
+        const targetRss = 'https://rss.rthk.hk/rss/news/express_local_chin.xml';
+        const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(targetRss)}`);
         const data = await res.json();
-        if (data && data.swt && data.swt.length > 0) {
-            data.swt.forEach(item => {
-                if (item.desc) {
-                    let text = item.desc.replace(/\s+/g, ' ').trim();
-                    titles.push(`【天文台提示】${text}`);
-                }
-            });
+        
+        if (data.status === 'ok' && data.items && data.items.length > 0) {
+            titles = data.items.map(item => item.title.trim()).filter(t => t && !t.includes("香港電台"));
         }
     } catch (e) {
-        console.warn("Weather news fetch failed:", e);
+        console.warn("rss2json fetch failed:", e);
     }
 
-    // 2. 若天文台當前無特別消息，調用政府新聞處熱門新聞備用
+    // 2. 備用方案：直連政府新聞處 API
     if (titles.length === 0) {
         try {
-            const res = await fetch('https://api.allorigins.win/get?url=' + encodeURIComponent('https://rss.rthk.hk/rss/news/express_local_chin.xml'));
+            const res = await fetch('https://www.news.gov.hk/tc/common/html/topstories.json');
             const data = await res.json();
-            if (data && data.contents) {
-                const parser = new DOMParser();
-                const xmlDoc = parser.parseFromString(data.contents, "text/xml");
-                const items = xmlDoc.getElementsByTagName("item");
-                for (let i = 0; i < items.length; i++) {
-                    const titleEl = items[i].getElementsByTagName("title")[0];
-                    if (titleEl && titleEl.textContent) {
-                        let text = titleEl.textContent.trim();
-                        if (text && !text.includes("香港電台")) {
-                            titles.push(text);
-                        }
-                    }
-                }
+            if (Array.isArray(data) && data.length > 0) {
+                titles = data.map(item => item.title.trim()).filter(t => t);
             }
         } catch (e) {
-            console.warn("Backup RSS fetch failed:", e);
+            console.warn("Gov news fetch failed:", e);
         }
     }
 
-    // 3. 保底即時滾動資訊（確保畫面永遠保持動態，不會卡在載入中）
+    // 3. 最終保底動態資訊 (確保跑馬燈必定正常顯示)
     if (titles.length === 0) {
         titles = [
-            "【即時消息】香港股市及金融市場持續運作，請留意最新牌價動態",
+            "【即時消息】港股及本地金融市場持續運作，請留意最新數據變化",
             "【天氣提示】本港氣溫及相對濕度持續更新中，請留意最新天氣預報",
             "【交通提示】全港公共交通及幹道情況請參考上方交通消息跑馬燈"
         ];
@@ -622,7 +608,7 @@ function showNextRthkNews() {
 
 fetchRthkNews();
 setInterval(showNextRthkNews, 5000);
-setInterval(fetchRthkNews, 180000); // 每 3 分鐘自動更新一次
+setInterval(fetchRthkNews, 180000); // 每 3 分鐘自動更新新聞數據
 
         // 6. 即時天氣 API
         async function fetchWeather() {
@@ -831,12 +817,35 @@ setInterval(fetchRthkNews, 180000); // 每 3 分鐘自動更新一次
         fetchMtrEta();
         setInterval(fetchMtrEta, 30000);
 
-        // 10. 電台播放
-        function playRadio(url) {
-            var player = document.getElementById('audio-player');
-            player.src = url;
-            player.play();
+        // =========================================================
+// 10. 電台播放功能 (支援 HLS .m3u8 串流播放)
+// =========================================================
+var hlsPlayer = null;
+
+function playRadio(url) {
+    var player = document.getElementById('audio-player');
+    if (!player) return;
+
+    // 檢查瀏覽器是否原生支援 HLS (例如 Safari)
+    if (player.canPlayType('application/vnd.apple.mpegurl')) {
+        player.src = url;
+        player.play().catch(e => console.error("Playback failed:", e));
+    } 
+    // 其他瀏覽器 (Chrome / Edge / Firefox) 自動調用 Hls.js 函式庫解碼
+    else if (window.Hls && Hls.isSupported()) {
+        if (hlsPlayer) {
+            hlsPlayer.destroy(); // 銷毀舊的播放器實例
         }
+        hlsPlayer = new Hls();
+        hlsPlayer.loadSource(url);
+        hlsPlayer.attachMedia(player);
+        hlsPlayer.on(Hls.Events.MANIFEST_PARSED, function() {
+            player.play().catch(e => console.error("Playback failed:", e));
+        });
+    } else {
+        alert("你的瀏覽器暫不支援 m3u8 格式電台播放。");
+    }
+}
     </script>
 </body>
 </html>
