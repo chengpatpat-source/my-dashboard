@@ -18,7 +18,7 @@
             margin: 0 auto; 
         }
         
-        /* 頂部時間 Header */
+        /* 1. 頂部時間 Header */
         .header { 
             background: #161b22; 
             border: 1px solid #30363d;
@@ -31,28 +31,33 @@
         .clock { font-size: 3.5rem; font-weight: 700; color: #58a6ff; font-variant-numeric: tabular-nums; letter-spacing: 1px; }
         .date { font-size: 1.1rem; color: #8b949e; font-weight: 500; margin-top: 4px; }
         
-        /* 特別交通消息 滾動跑馬燈 */
-        .traffic-ticker-container {
+        /* 2. 跑馬燈區塊 (特別交通 & 即時新聞) */
+        .ticker-card {
             background: #161b22;
-            border: 1px solid #f43f5e;
-            border-left: 6px solid #f43f5e;
-            border-radius: 8px;
-            padding: 12px 20px;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 16px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .ticker-row {
             display: flex;
             align-items: center;
             gap: 15px;
             overflow: hidden;
-            height: 48px;
+            height: 32px;
         }
         .ticker-label {
-            background: #f43f5e;
-            color: #ffffff;
             font-size: 0.8rem;
             font-weight: 700;
-            padding: 4px 8px;
+            padding: 4px 10px;
             border-radius: 4px;
             white-space: nowrap;
         }
+        .traffic-label { background: #f43f5e; color: #ffffff; }
+        .news-label { background: #22c55e; color: #ffffff; }
+        
         .ticker-content {
             font-size: 0.95rem;
             color: #f0f6fc;
@@ -63,7 +68,7 @@
             width: 100%;
         }
 
-        /* 網格佈局 */
+        /* 3. 網格佈局 */
         .main-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
         
         /* 卡片通用樣式 */
@@ -78,7 +83,7 @@
             font-weight: 600; 
             text-transform: uppercase;
             letter-spacing: 1px;
-            margin-bottom: 20px; 
+            margin-bottom: 16px; 
             color: #8b949e; 
             display: flex; 
             align-items: center; 
@@ -94,9 +99,24 @@
             letter-spacing: 0.5px;
         }
         
-        /* 天氣區域 */
-        .temp-display { font-size: 3.5rem; font-weight: 700; color: #f2cc60; line-height: 1; margin: 10px 0; }
-        .temp-range { font-size: 1.1rem; color: #f0f6fc; font-weight: 600; margin-bottom: 12px; }
+        /* 當前天氣樣式增強 */
+        .weather-desc-box {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 10px 0;
+        }
+        .temp-display { font-size: 3.5rem; font-weight: 700; color: #f2cc60; line-height: 1; }
+        .weather-status-text { 
+            font-size: 1.25rem; 
+            font-weight: 600; 
+            color: #38bdf8; 
+            background: #0d1117; 
+            padding: 6px 12px; 
+            border-radius: 6px; 
+            border: 1px solid #21262d; 
+        }
+        .temp-range { font-size: 1.05rem; color: #f0f6fc; font-weight: 600; margin-bottom: 12px; }
         .weather-info { display: flex; flex-wrap: wrap; gap: 15px; font-size: 0.9rem; color: #8b949e; }
         .weather-info strong { color: #f0f6fc; }
         
@@ -180,18 +200,27 @@
         <button class="btn" onclick="location.reload(true)">↺ 強制刷新</button>
     </div>
 
-    <!-- 2. 特別交通消息跑馬燈 -->
-    <div class="traffic-ticker-container">
-        <span class="ticker-label">特別交通消息</span>
-        <div class="ticker-content" id="traffic-news">載入即時交通消息中...</div>
+    <!-- 2. 特別交通消息 & 即時新聞雙跑馬燈 -->
+    <div class="ticker-card">
+        <div class="ticker-row">
+            <span class="ticker-label traffic-label">交通消息</span>
+            <div class="ticker-content" id="traffic-news">載入即時交通消息中...</div>
+        </div>
+        <div class="ticker-row">
+            <span class="ticker-label news-label">即時新聞</span>
+            <div class="ticker-content" id="rthk-news">載入最新新聞中...</div>
+        </div>
     </div>
 
     <!-- 3. 天氣與交通資訊區塊 -->
     <div class="main-grid">
-        <!-- 當日天氣卡片 -->
+        <!-- 當日天氣卡片 (加強中文字描述) -->
         <div class="card">
             <div class="card-title">CURRENT WEATHER</div>
-            <div class="temp-display" id="temp">--°C</div>
+            <div class="weather-desc-box">
+                <div class="temp-display" id="temp">--°C</div>
+                <div class="weather-status-text" id="weather-desc">載入中...</div>
+            </div>
             <div class="temp-range" id="temp-range">今日氣溫: --°C - --°C</div>
             <div class="weather-info">
                 <span>相對濕度: <strong id="humidity">--%</strong></span>
@@ -254,7 +283,7 @@
         setInterval(updateClock, 1000);
         updateClock();
 
-        // 2. 天氣編號轉換 Emoji（純文字，完全不需要任何外部圖片檔案）
+        // 2. 天氣編號轉換 Emoji
         function getWeatherEmoji(iconCode) {
             const code = parseInt(iconCode, 10);
             if ([50, 51].includes(code)) return '☀️'; 
@@ -287,15 +316,14 @@
                         loadedNews.push(newsText);
                     }
                 }
-                
                 newsList = loadedNews.length > 0 ? loadedNews : ["目前全港交通情況大致正常，暫無特別交通消息。"];
             } catch (e) {
                 newsList = ["目前全港交通情況大致正常，暫無特別交通消息。"];
             }
-            showNextNews();
+            showNextTrafficNews();
         }
 
-        function showNextNews() {
+        function showNextTrafficNews() {
             if (newsList.length === 0) return;
             var tickerEl = document.getElementById('traffic-news');
             tickerEl.style.opacity = 0;
@@ -307,22 +335,71 @@
         }
 
         fetchTrafficNews();
-        setInterval(showNextNews, 3000);
+        setInterval(showNextTrafficNews, 4000);
         setInterval(fetchTrafficNews, 300000);
 
-        // 4. 即時天氣 API + 9天預報 API
+        // 4. 香港電台 (RTHK) 即時新聞 RSS
+        var rthkNewsList = [];
+        var currentRthkIndex = 0;
+
+        async function fetchRthkNews() {
+            try {
+                // 使用 RSS 轉 JSON 服務避免跨域 CORS 阻擋
+                const res = await fetch('https://api.rss2json.com/v1/api.json?rss_url=https%3A%2F%2Frss.rthk.hk%2Frss%2Fnews%2Fexpress_local_chin.xml');
+                const data = await res.json();
+                
+                if (data.status === 'ok' && data.items && data.items.length > 0) {
+                    rthkNewsList = data.items.map(item => item.title);
+                } else {
+                    rthkNewsList = ["即時新聞載入完成。"];
+                }
+            } catch (e) {
+                rthkNewsList = ["即時新聞連線中..."];
+            }
+            showNextRthkNews();
+        }
+
+        function showNextRthkNews() {
+            if (rthkNewsList.length === 0) return;
+            var tickerEl = document.getElementById('rthk-news');
+            tickerEl.style.opacity = 0;
+            setTimeout(function() {
+                tickerEl.innerText = rthkNewsList[currentRthkIndex];
+                tickerEl.style.opacity = 1;
+                currentRthkIndex = (currentRthkIndex + 1) % rthkNewsList.length;
+            }, 300);
+        }
+
+        fetchRthkNews();
+        setInterval(showNextRthkNews, 5000);
+        setInterval(fetchRthkNews, 600000);
+
+        // 5. 即時天氣 API (加強：顯示中文天氣描述)
         async function fetchWeather() {
             try {
                 const res = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=tc');
                 const data = await res.json();
+                
+                // 氣溫
                 if(data.temperature && data.temperature.data && data.temperature.data.length > 0) {
                     document.getElementById('temp').innerText = data.temperature.data[0].value + '°C';
                 }
+                // 濕度
                 if(data.humidity && data.humidity.data && data.humidity.data.length > 0) {
                     document.getElementById('humidity').innerText = data.humidity.data[0].value + '%';
                 }
+                
+                // 天氣概況中文描述 (例: 大致多雲 / 有幾陣驟雨)
+                if(data.weatherOverview && data.weatherOverview.trim() !== "") {
+                    document.getElementById('weather-desc').innerText = data.weatherOverview;
+                } else if(data.icon) {
+                    // 若無文字概述，根據 icon 號碼給予預設描述
+                    const iconMap = { 50: "陽光充沛", 51: "大致天晴", 52: "短暫陽光", 60: "多雲", 62: "微雨", 63: "有雨", 64: "大雨", 65: "雷暴" };
+                    document.getElementById('weather-desc').innerText = iconMap[data.icon[0]] || "多雲";
+                }
             } catch(e) { console.error("rhrread error:", e); }
 
+            // 9 天天氣預報
             try {
                 const resFnd = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=fnd&lang=tc');
                 const fndData = await resFnd.json();
@@ -337,8 +414,6 @@
                     let forecastHtml = '';
                     fndData.weatherForecast.forEach(day => {
                         const dateStr = day.forecastDate ? (day.forecastDate.substring(4, 6) + '/' + day.forecastDate.substring(6, 8)) : '--';
-                        
-                        // 取得原生 Emoji
                         let emoji = getWeatherEmoji(day.ForecastIcon || 50);
 
                         const dMin = day.forecastMintemp ? day.forecastMintemp.value : '--';
@@ -346,7 +421,6 @@
                         const rhMin = day.forecastMinrh ? day.forecastMinrh.value : '--';
                         const rhMax = day.forecastMaxrh ? day.forecastMaxrh.value : '--';
 
-                        // 渲染結構完全不含 <img> 標籤
                         forecastHtml += `
                             <div class="forecast-card">
                                 <div class="forecast-date">${dateStr}</div>
@@ -368,7 +442,7 @@
         fetchWeather();
         setInterval(fetchWeather, 600000);
 
-        // 5. 九巴 / 龍運 API (A33X & E37)
+        // 6. 九巴 / 龍運 API (A33X & E37)
         async function fetchBusEta() {
             // A33X
             try {
@@ -429,7 +503,7 @@
         fetchBusEta();
         setInterval(fetchBusEta, 30000);
 
-        // 6. 港鐵 API (屯馬綫 - 屯門站)
+        // 7. 港鐵 API (屯馬綫 - 屯門站)
         async function fetchMtrEta() {
             const line = 'TML'; 
             const sta = 'TUM';  
@@ -466,7 +540,7 @@
         fetchMtrEta();
         setInterval(fetchMtrEta, 30000);
 
-        // 7. 電台播放
+        // 8. 電台播放
         function playRadio(url) {
             var player = document.getElementById('audio-player');
             player.src = url;
