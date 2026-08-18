@@ -118,6 +118,7 @@
         }
         .forecast-date { font-size: 0.85rem; color: #8b949e; margin-bottom: 4px; }
         .forecast-week { font-size: 0.95rem; font-weight: 600; color: #f0f6fc; margin-bottom: 8px; }
+        .forecast-icon-emoji { font-size: 2.2rem; line-height: 1.2; margin: 4px 0; }
         .forecast-temp { font-size: 0.95rem; font-weight: 700; color: #f2cc60; margin-top: 6px; }
         .forecast-rh { font-size: 0.75rem; color: #8b949e; margin-top: 4px; }
         .forecast-psr { font-size: 0.75rem; color: #38bdf8; margin-top: 2px; }
@@ -253,6 +254,18 @@
         setInterval(updateClock, 1000);
         updateClock();
 
+        // 天氣圖示編號對應 Emoji
+        function getWeatherEmoji(iconCode) {
+            const code = parseInt(iconCode, 10);
+            if ([50, 51].includes(code)) return '☀️'; // 晴朗 / 陽光充沛
+            if ([52, 53, 54, 60, 61].includes(code)) return '⛅'; // 短暫陽光 / 多雲
+            if ([62, 63, 64, 65].includes(code)) return '🌧️'; // 驟雨 / 小雨
+            if ([80, 81, 82, 83, 84, 85].includes(code)) return '⛈️'; // 雷暴
+            if ([90, 91].includes(code)) return '🌤️'; // 炎熱 / 酷熱
+            if ([92, 93].includes(code)) return '🌬️'; // 風勢較大
+            return '🌤️';
+        }
+
         // 2. 特別交通消息 API
         var newsList = [];
         var currentNewsIndex = 0;
@@ -325,10 +338,8 @@
                     fndData.weatherForecast.forEach(day => {
                         const dateStr = day.forecastDate ? (day.forecastDate.substring(4, 6) + '/' + day.forecastDate.substring(6, 8)) : '--';
                         
-                        // 修正：補齊兩位數並使用穩定的官方圖片網址，消除死循環
-                        let rawIcon = day.ForecastIcon || 50;
-                        // 使用 CDN 託管的天文台圖示，確保 100% 正常顯示
-let iconUrl = `https://cdn.jsdelivr.net/gh/mian271828/hk-weather-icons@main/icons/pic${rawIcon}.png`;
+                        // 改用原生 Emoji 圖示
+                        let emoji = getWeatherEmoji(day.ForecastIcon || 50);
 
                         const dMin = day.forecastMintemp ? day.forecastMintemp.value : '--';
                         const dMax = day.forecastMaxtemp ? day.forecastMaxtemp.value : '--';
@@ -339,7 +350,7 @@ let iconUrl = `https://cdn.jsdelivr.net/gh/mian271828/hk-weather-icons@main/icon
                             <div class="forecast-card">
                                 <div class="forecast-date">${dateStr}</div>
                                 <div class="forecast-week">${day.week || ''}</div>
-                                <img src="${iconUrl}" width="38" height="38" alt="weather icon">
+                                <div class="forecast-icon-emoji">${emoji}</div>
                                 <div class="forecast-temp">${dMin}° - ${dMax}°C</div>
                                 <div class="forecast-rh">${rhMin}% - ${rhMax}%</div>
                                 <div class="forecast-psr">${day.PSR || ''}</div>
