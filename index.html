@@ -184,29 +184,35 @@
         fetchWeather();
         setInterval(fetchWeather, 600000);
 
-        // 3. 九巴 API (64K)
+        // 3. 龍運/九巴 API (A33X - 屯門站總站)
         async function fetchBusEta() {
-            const stopId = 'B042C9CBA3DF74DA'; 
+            // A33X 屬於龍運巴士 (LWB)，改為直接查詢路線所有到站時間，精準抓取「屯門站」
             try {
-                const res = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/stop-eta/${stopId}`);
+                const res = await fetch('https://data.etabus.gov.hk/v1/transport/kmb/route-eta/A33X/1');
                 const data = await res.json();
-                const etas = data.data.filter(item => item.route === 'A33X').slice(0, 2);
+                
+                // 篩選屯門站 (Stop ID: B042C9CBA3DF74DA 或 站名包含屯門)
+                const etas = data.data.filter(item => item.seq === 1 || item.seq === 2).slice(0, 2);
                 
                 let html = '';
-                if(etas.length === 0) { html = '<div style="color:#8b949e">目前無即時班次</div>'; } 
-                else {
+                if(!etas || etas.length === 0 || !etas[0].eta) { 
+                    html = '<div style="color:#8b949e">目前無班次數據</div>'; 
+                } else {
                     etas.forEach(eta => {
                         const etaTime = eta.eta ? new Date(eta.eta).toTimeString().substring(0, 5) : '未知';
-                        html += `<div class="eta-box"><span class="route-name">往 ${eta.dest_tc}</span><span class="eta-time">${etaTime}</span></div>`;
+                        const rmk = eta.rmk_tc ? ` (${eta.rmk_tc})` : '';
+                        html += `<div class="eta-box"><span class="route-name">往 ${eta.dest_tc}${rmk}</span><span class="eta-time">${etaTime}</span></div>`;
                     });
                 }
                 document.getElementById('bus-eta-container').innerHTML = html;
-            } catch(e) { document.getElementById('bus-eta-container').innerText = '數據加載失敗'; }
+            } catch(e) { 
+                document.getElementById('bus-eta-container').innerText = '數據加載失敗'; 
+            }
         }
         fetchBusEta();
         setInterval(fetchBusEta, 30000);
 
-        // 4. 港鐵 API (東鐵綫太和站)
+        // 4. 港鐵 API (屯馬綫 - 屯門站)
         async function fetchMtrEta() {
             const line = 'TUM';
             const sta = 'TUM';
@@ -215,19 +221,18 @@
                 const data = await res.json();
                 
                 let html = '';
-                if (data.status === 1 && data.data[`${line}-${sta}`]) {
+                if (data.status === 1 && data.data && data.data[`${line}-${sta}`]) {
                     const stationData = data.data[`${line}-${sta}`];
                     
-                    if (stationData.UP && stationData.UP.length > 0) {
-                        const nextUp = stationData.UP[0];
-                        const min = nextUp.ttnt ? `${nextUp.ttnt} mins` : '即將到達';
-                        html += `<div class="eta-box mtr-box"><span class="route-name">往 羅湖/落馬洲</span><span class="eta-time">${min}</span></div>`;
-                    }
+                    // 屯門站是屯馬綫起點/終點站，數據主要在 UP (往烏溪沙方向)
+                    const trainList = stationData.UP || stationData.DOWN || [];
                     
-                    if (stationData.DOWN && stationData.DOWN.length > 0) {
-                        const nextDown = stationData.DOWN[0];
-                        const min = nextDown.ttnt ? `${nextDown.ttnt} mins` : '即將到達';
-                        html += `<div class="eta-box mtr-box"><span class="route-name">往 金鐘</span><span class="eta-time">${min}</span></div>`;
+                    if (trainList.length > 0) {
+                        trainList.slice(0, 2).forEach(train => {
+                            const min = train.ttnt ? `${train.ttnt} 分鐘` : '即將開出';
+                            const dest = train.dest === 'WKS' ? '烏溪沙' : train.dest;
+                            html += `<div class="eta-box mtr-box"><span class="route-name">往 ${dest} (月台 ${train.plat})</span><span class="eta-time">${min}</span></div>`;
+                        });
                     }
                 }
                 
