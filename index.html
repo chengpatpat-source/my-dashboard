@@ -186,11 +186,11 @@
 
         // 3. 九巴 API (64K)
         async function fetchBusEta() {
-            const stopId = '9D48C1C89F3876B4'; 
+            const stopId = 'B042C9CBA3DF74DA'; 
             try {
                 const res = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/stop-eta/${stopId}`);
                 const data = await res.json();
-                const etas = data.data.filter(item => item.route === '64K').slice(0, 2);
+                const etas = data.data.filter(item => item.route === 'A33X').slice(0, 2);
                 
                 let html = '';
                 if(etas.length === 0) { html = '<div style="color:#8b949e">目前無即時班次</div>'; } 
