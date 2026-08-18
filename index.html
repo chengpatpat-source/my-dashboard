@@ -129,13 +129,13 @@
 
         <!-- 2. 巴士到站卡片 -->
         <div class="card">
-            <div class="card-title">BUS DEPARTURES (64K)</div>
+            <div class="card-title">BUS DEPARTURES (A33X)</div>
             <div id="bus-eta-container">載入數據中...</div>
         </div>
 
         <!-- 3. 港鐵班次卡片 -->
         <div class="card">
-            <div class="card-title">MTR SCHEDULE (太和站)</div>
+            <div class="card-title">MTR SCHEDULE (屯門站)</div>
             <div id="mtr-eta-container">載入數據中...</div>
         </div>
     </div>
@@ -208,8 +208,8 @@
 
         // 4. 港鐵 API (東鐵綫太和站)
         async function fetchMtrEta() {
-            const line = 'EAL';
-            const sta = 'TWO';
+            const line = 'TUM';
+            const sta = 'TUM';
             try {
                 const res = await fetch(`https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php?line=${line}&sta=${sta}`);
                 const data = await res.json();
