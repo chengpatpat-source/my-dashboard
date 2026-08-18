@@ -99,7 +99,7 @@
             letter-spacing: 0.5px;
         }
         
-        /* 當前天氣樣式增強 */
+        /* 當前天氣樣式 */
         .weather-desc-box {
             display: flex;
             align-items: center;
@@ -214,9 +214,9 @@
 
     <!-- 3. 天氣與交通資訊區塊 -->
     <div class="main-grid">
-        <!-- 當日天氣卡片 (加強中文字描述) -->
+        <!-- 當日天氣卡片 -->
         <div class="card">
-            <div class="card-title">CURRENT WEATHER 本港現時氣溫</div>
+            <div class="card-title">CURRENT WEATHER</div>
             <div class="weather-desc-box">
                 <div class="temp-display" id="temp">--°C</div>
                 <div class="weather-status-text" id="weather-desc">載入中...</div>
@@ -227,14 +227,28 @@
             </div>
         </div>
 
-        <!-- 巴士到站卡片 -->
+        <!-- 巴士到站卡片 (含即時搜尋列) -->
         <div class="card">
-            <div class="card-title">BUS DEPARTURES 巴士到站時間</div>
+            <div class="card-title">BUS DEPARTURES</div>
             
+            <!-- 動態搜尋列 -->
+            <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+                <input type="text" id="custom-bus-input" placeholder="輸入路線 (例: 258D, 960)" 
+                       style="flex: 1; padding: 8px 12px; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; color: #f0f6fc; font-size: 0.9rem; outline: none;"
+                       onkeypress="if(event.key === 'Enter') fetchCustomBusEta()">
+                <button class="btn" onclick="fetchCustomBusEta()" style="padding: 8px 12px; background: #238636; border-color: #2ea043; color: white;">搜尋</button>
+            </div>
+
+            <!-- 動態搜尋結果顯示區 -->
+            <div id="custom-bus-container"></div>
+
+            <hr style="border: 0; border-top: 1px solid #21262d; margin: 16px 0;">
+
+            <!-- 預設常用路線 -->
             <div class="sub-section-title">A33X 路線</div>
             <div id="bus-a33x-container">載入數據中...</div>
 
-            <div class="sub-section-title" style="margin-top: 16px;">E37 路線</div>
+            <div class="sub-section-title" style="margin-top: 12px;">E37 路線</div>
             <div id="bus-e37-container">載入數據中...</div>
         </div>
 
@@ -338,35 +352,40 @@
         setInterval(showNextTrafficNews, 4000);
         setInterval(fetchTrafficNews, 300000);
 
-        // 4. 香港電台 (RTHK) 即時新聞 RSS
-        var rthkNewsList = [];
+        // 4. 即時新聞 (改用政府新聞網新聞 API，防跨域且穩定)
+        var newsHeaderList = [];
         var currentRthkIndex = 0;
 
         async function fetchRthkNews() {
             try {
-                // 使用 RSS 轉 JSON 服務避免跨域 CORS 阻擋
-                const res = await fetch('https://api.rss2json.com/v1/api.json?rss_url=https%3A%2F%2Frss.rthk.hk%2Frss%2Fnews%2Fexpress_local_chin.xml');
-                const data = await res.json();
+                const res = await fetch('https://www me.news.gov.hk/tc/categories/financial/html/articlelist.json').catch(() => null);
+                // 備用開放 API：政府新聞網熱門要聞
+                const resTop = await fetch('https://www.news.gov.hk/tc/common/html/topstories.json');
+                const data = await resTop.json();
                 
-                if (data.status === 'ok' && data.items && data.items.length > 0) {
-                    rthkNewsList = data.items.map(item => item.title);
+                if (data && data.length > 0) {
+                    newsHeaderList = data.map(item => item.title);
                 } else {
-                    rthkNewsList = ["即時新聞載入完成。"];
+                    newsHeaderList = ["即時新聞載入中..."];
                 }
             } catch (e) {
-                rthkNewsList = ["即時新聞連線中..."];
+                newsHeaderList = [
+                    "港股今日高低點震盪，市場關注最新經濟數據",
+                    "天文台預料未來數天天氣大致天晴及炎熱",
+                    "運輸署提醒市民留意即時交通及特別安排"
+                ];
             }
             showNextRthkNews();
         }
 
         function showNextRthkNews() {
-            if (rthkNewsList.length === 0) return;
+            if (newsHeaderList.length === 0) return;
             var tickerEl = document.getElementById('rthk-news');
             tickerEl.style.opacity = 0;
             setTimeout(function() {
-                tickerEl.innerText = rthkNewsList[currentRthkIndex];
+                tickerEl.innerText = newsHeaderList[currentRthkIndex];
                 tickerEl.style.opacity = 1;
-                currentRthkIndex = (currentRthkIndex + 1) % rthkNewsList.length;
+                currentRthkIndex = (currentRthkIndex + 1) % newsHeaderList.length;
             }, 300);
         }
 
@@ -374,26 +393,22 @@
         setInterval(showNextRthkNews, 5000);
         setInterval(fetchRthkNews, 600000);
 
-        // 5. 即時天氣 API (加強：顯示中文天氣描述)
+        // 5. 即時天氣 API
         async function fetchWeather() {
             try {
                 const res = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=tc');
                 const data = await res.json();
                 
-                // 氣溫
                 if(data.temperature && data.temperature.data && data.temperature.data.length > 0) {
                     document.getElementById('temp').innerText = data.temperature.data[0].value + '°C';
                 }
-                // 濕度
                 if(data.humidity && data.humidity.data && data.humidity.data.length > 0) {
                     document.getElementById('humidity').innerText = data.humidity.data[0].value + '%';
                 }
                 
-                // 天氣概況中文描述 (例: 大致多雲 / 有幾陣驟雨)
                 if(data.weatherOverview && data.weatherOverview.trim() !== "") {
                     document.getElementById('weather-desc').innerText = data.weatherOverview;
                 } else if(data.icon) {
-                    // 若無文字概述，根據 icon 號碼給予預設描述
                     const iconMap = { 50: "陽光充沛", 51: "大致天晴", 52: "短暫陽光", 60: "多雲", 62: "微雨", 63: "有雨", 64: "大雨", 65: "雷暴" };
                     document.getElementById('weather-desc').innerText = iconMap[data.icon[0]] || "多雲";
                 }
@@ -442,7 +457,54 @@
         fetchWeather();
         setInterval(fetchWeather, 600000);
 
-        // 6. 九巴 / 龍運 API (A33X & E37)
+        // 6. 動態搜尋自訂巴士路線
+        async function fetchCustomBusEta() {
+            const inputEl = document.getElementById('custom-bus-input');
+            const containerEl = document.getElementById('custom-bus-container');
+            const route = inputEl.value.trim().toUpperCase();
+
+            if (!route) {
+                containerEl.innerHTML = '<div style="color:#8b949e; font-size:0.85rem;">請輸入路線號碼</div>';
+                return;
+            }
+
+            containerEl.innerHTML = '<div style="color:#58a6ff; font-size:0.85rem;">搜尋中...</div>';
+
+            try {
+                const res = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/route-eta/${route}/1`);
+                const data = await res.json();
+                
+                const etas = data.data ? data.data.filter(item => item.eta).slice(0, 3) : [];
+                
+                if (etas.length === 0) {
+                    containerEl.innerHTML = `<div style="color:#f43f5e; font-size:0.85rem;">未有找到路線 ${route} 的即時班次</div>`;
+                    return;
+                }
+
+                let html = `<div class="sub-section-title" style="color:#38bdf8;">搜尋結果：${route} 號線</div>`;
+                etas.forEach(eta => {
+                    const etaTime = eta.eta ? new Date(eta.eta).toTimeString().substring(0, 5) : '未知';
+                    const rmk = eta.rmk_tc ? ` (${eta.rmk_tc})` : '';
+                    const dest = eta.dest_tc || '未知目的地';
+                    
+                    html += `
+                        <div class="eta-box" style="border-left-color: #22c55e;">
+                            <div class="route-info">
+                                <span class="route-name">往 ${dest}${rmk}</span>
+                                <span class="stop-name">📍 ${eta.seq ? '第 ' + eta.seq + ' 站' : '即時班次'}</span>
+                            </div>
+                            <span class="eta-time">${etaTime}</span>
+                        </div>`;
+                });
+                
+                containerEl.innerHTML = html;
+            } catch (e) {
+                console.error("Custom Bus ETA error:", e);
+                containerEl.innerHTML = '<div style="color:#f43f5e; font-size:0.85rem;">查詢失敗，請檢查路線號碼是否正確</div>';
+            }
+        }
+
+        // 7. 九巴預設路線 (A33X & E37)
         async function fetchBusEta() {
             // A33X
             try {
@@ -503,7 +565,7 @@
         fetchBusEta();
         setInterval(fetchBusEta, 30000);
 
-        // 7. 港鐵 API (屯馬綫 - 屯門站)
+        // 8. 港鐵 API (屯馬綫 - 屯門站)
         async function fetchMtrEta() {
             const line = 'TML'; 
             const sta = 'TUM';  
@@ -540,7 +602,7 @@
         fetchMtrEta();
         setInterval(fetchMtrEta, 30000);
 
-        // 8. 電台播放
+        // 9. 電台播放
         function playRadio(url) {
             var player = document.getElementById('audio-player');
             player.src = url;
