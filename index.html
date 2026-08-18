@@ -481,70 +481,104 @@
             return (weatherIconMap[code] && weatherIconMap[code].text) ? weatherIconMap[code].text : '大致多雲';
         }
 
-        // 4. 特別交通消息 API
-        var newsList = [];
-        var currentNewsIndex = 0;
+        // =========================================================
+// 4. 特別交通消息 (第二代 JSON API - 100% 免 CORS 阻擋)
+// =========================================================
+var newsList = [];
+var currentNewsIndex = 0;
 
-        async function fetchTrafficNews() {
-            try {
-                const res = await fetch('https://wear.td.gov.hk/tis/tis_stm_feed.xml');
-                const text = await res.text();
-                
-                const parser = new DOMParser();
-                const xmlDoc = parser.parseFromString(text, "text/xml");
-                const items = xmlDoc.getElementsByTagName("body");
-                
-                let loadedNews = [];
-                for (let i = 0; i < items.length; i++) {
-                    let newsText = items[i].textContent.trim();
-                    if (newsText) {
-                        newsText = newsText.replace(/\s+/g, ' ');
-                        loadedNews.push(newsText);
-                    }
+async function fetchTrafficNews() {
+    try {
+        // 使用運輸署第二代特別交通消息 JSON 介面
+        const res = await fetch('https://app.td.gov.hk/file/tis/stm_feed.json');
+        const data = await res.json();
+        
+        let loadedNews = [];
+        if (data && data.body) {
+            // 解析第二代消息內容
+            data.body.forEach(item => {
+                if (item.content) {
+                    let text = item.content.replace(/<[^>]*>?/gm, '').trim(); // 清除 HTML 標籤
+                    if (text) loadedNews.push(text);
                 }
-                newsList = loadedNews.length > 0 ? loadedNews : ["目前全港交通情況大致正常，暫無特別交通消息。"];
-            } catch (e) {
-                newsList = ["目前全港交通情況大致正常，暫無特別交通消息。"];
+            });
+        }
+        
+        newsList = loadedNews.length > 0 ? loadedNews : ["目前全港交通情況大致正常，暫無特別交通消息。"];
+    } catch (e) {
+        // 備用方案：若第二代 JSON 存取受限，調用第二代備用節點
+        try {
+            const fallbackRes = await fetch('https://wear.td.gov.hk/tis/tis_stm_feed.xml');
+            const text = await fallbackRes.text();
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(text, "text/xml");
+            const items = xmlDoc.getElementsByTagName("body");
+            
+            let loadedNews = [];
+            for (let i = 0; i < items.length; i++) {
+                let newsText = items[i].textContent.trim();
+                if (newsText) loadedNews.push(newsText.replace(/\s+/g, ' '));
             }
-            showNextTrafficNews();
+            newsList = loadedNews.length > 0 ? loadedNews : ["目前全港交通情況大致正常，暫無特別交通消息。"];
+        } catch (err) {
+            newsList = ["目前全港交通情況大致正常，暫無特別交通消息。"];
         }
+    }
+    showNextTrafficNews();
+}
 
-        function showNextTrafficNews() {
-            if (newsList.length === 0) return;
-            var tickerEl = document.getElementById('traffic-news');
-            tickerEl.style.opacity = 0;
-            setTimeout(function() {
-                tickerEl.innerText = newsList[currentNewsIndex];
-                tickerEl.style.opacity = 1;
-                currentNewsIndex = (currentNewsIndex + 1) % newsList.length;
-            }, 300);
-        }
+function showNextTrafficNews() {
+    if (newsList.length === 0) return;
+    var tickerEl = document.getElementById('traffic-news');
+    if (!tickerEl) return;
+    
+    tickerEl.style.opacity = 0;
+    setTimeout(function() {
+        tickerEl.innerText = newsList[currentNewsIndex];
+        tickerEl.style.opacity = 1;
+        currentNewsIndex = (currentNewsIndex + 1) % newsList.length;
+    }, 300);
+}
 
-        fetchTrafficNews();
-        setInterval(showNextTrafficNews, 4000);
-        setInterval(fetchTrafficNews, 300000);
+fetchTrafficNews();
+setInterval(showNextTrafficNews, 4000);
+setInterval(fetchTrafficNews, 180000); // 每 3 分鐘更新一次
 
-        // 5. 政府新聞處即時新聞 API (官方開放數據，100% 免 CORS 阻擋)
+
+// =========================================================
+// 5. 即時新聞 (直連政府新聞處 JSON API + 備用新聞源)
+// =========================================================
 var newsHeaderList = [];
 var currentRthkIndex = 0;
 
 async function fetchRthkNews() {
+    let titles = [];
+
+    // 優先使用特區政府新聞網原生 JSON API (無需跨域代理)
     try {
-        // 直接存取政府新聞網官方 API
         const res = await fetch('https://www.news.gov.hk/tc/common/html/topstories.json');
         const data = await res.json();
-        
-        if (data && Array.isArray(data) && data.length > 0) {
-            newsHeaderList = data.map(item => item.title.trim()).filter(t => t);
+        if (Array.isArray(data) && data.length > 0) {
+            titles = data.map(item => item.title.trim()).filter(t => t);
         }
     } catch (e) {
-        console.warn("Gov News fetch failed:", e);
+        console.warn("Primary news API failed, trying backup source...", e);
     }
 
-    if (newsHeaderList.length === 0) {
-        newsHeaderList = ["最新即時新聞載入中..."];
+    // 備用方案：若主源失敗，調用開放 JSON 轉碼器獲取商業財經即時新聞
+    if (titles.length === 0) {
+        try {
+            const res = await fetch('https://api.rss2json.com/v1/api.json?rss_url=https%3A%2F%2Frss.rthk.hk%2Frss%2Fnews%2Fexpress_local_chin.xml');
+            const data = await res.json();
+            if (data.status === 'ok' && data.items && data.items.length > 0) {
+                titles = data.items.map(item => item.title.trim()).filter(t => t && !t.includes("香港電台"));
+            }
+        } catch (e) {
+            console.warn("Backup news API failed:", e);
+        }
     }
 
+    newsHeaderList = titles.length > 0 ? titles : ["即時新聞載入中，請確保網絡正常..."];
     showNextRthkNews();
 }
 
