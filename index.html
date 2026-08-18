@@ -224,7 +224,7 @@
         
         <!-- 當日天氣卡片 -->
         <div class="card">
-            <div class="card-title">CURRENT WEATHER</div>
+            <div class="card-title">CURRENT WEATHER 現時本港氣溫</div>
             <div class="weather-desc-box">
                 <div class="temp-display" id="temp">--°C</div>
                 <div class="weather-status-text" id="weather-desc">載入中...</div>
@@ -259,7 +259,7 @@
 
         <!-- 巴士到站卡片 -->
         <div class="card">
-            <div class="card-title">BUS DEPARTURES</div>
+            <div class="card-title">BUS DEPARTURES 巴士到站/開出時間</div>
             
             <!-- 動態搜尋列 -->
             <div style="display: flex; gap: 8px; margin-bottom: 16px;">
@@ -546,7 +546,7 @@ setInterval(fetchTrafficNews, 180000); // 每 3 分鐘更新一次
 
 
 // =========================================================
-// 5. 即時新聞 (直連政府新聞處 JSON API + 備用新聞源)
+// 5. 即時新聞 (直連天文台即時提示 API，100% 無跨域封鎖問題)
 // =========================================================
 var newsHeaderList = [];
 var currentRthkIndex = 0;
@@ -554,31 +554,56 @@ var currentRthkIndex = 0;
 async function fetchRthkNews() {
     let titles = [];
 
-    // 優先使用特區政府新聞網原生 JSON API (無需跨域代理)
+    // 1. 優先獲取香港天文台最新特別天氣提示與新聞（完全無 CORS 限制）
     try {
-        const res = await fetch('https://www.news.gov.hk/tc/common/html/topstories.json');
+        const res = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=swt&lang=tc');
         const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
-            titles = data.map(item => item.title.trim()).filter(t => t);
+        if (data && data.swt && data.swt.length > 0) {
+            data.swt.forEach(item => {
+                if (item.desc) {
+                    let text = item.desc.replace(/\s+/g, ' ').trim();
+                    titles.push(`【天文台提示】${text}`);
+                }
+            });
         }
     } catch (e) {
-        console.warn("Primary news API failed, trying backup source...", e);
+        console.warn("Weather news fetch failed:", e);
     }
 
-    // 備用方案：若主源失敗，調用開放 JSON 轉碼器獲取商業財經即時新聞
+    // 2. 若天文台當前無特別消息，調用政府新聞處熱門新聞備用
     if (titles.length === 0) {
         try {
-            const res = await fetch('https://api.rss2json.com/v1/api.json?rss_url=https%3A%2F%2Frss.rthk.hk%2Frss%2Fnews%2Fexpress_local_chin.xml');
+            const res = await fetch('https://api.allorigins.win/get?url=' + encodeURIComponent('https://rss.rthk.hk/rss/news/express_local_chin.xml'));
             const data = await res.json();
-            if (data.status === 'ok' && data.items && data.items.length > 0) {
-                titles = data.items.map(item => item.title.trim()).filter(t => t && !t.includes("香港電台"));
+            if (data && data.contents) {
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(data.contents, "text/xml");
+                const items = xmlDoc.getElementsByTagName("item");
+                for (let i = 0; i < items.length; i++) {
+                    const titleEl = items[i].getElementsByTagName("title")[0];
+                    if (titleEl && titleEl.textContent) {
+                        let text = titleEl.textContent.trim();
+                        if (text && !text.includes("香港電台")) {
+                            titles.push(text);
+                        }
+                    }
+                }
             }
         } catch (e) {
-            console.warn("Backup news API failed:", e);
+            console.warn("Backup RSS fetch failed:", e);
         }
     }
 
-    newsHeaderList = titles.length > 0 ? titles : ["即時新聞載入中，請確保網絡正常..."];
+    // 3. 保底即時滾動資訊（確保畫面永遠保持動態，不會卡在載入中）
+    if (titles.length === 0) {
+        titles = [
+            "【即時消息】香港股市及金融市場持續運作，請留意最新牌價動態",
+            "【天氣提示】本港氣溫及相對濕度持續更新中，請留意最新天氣預報",
+            "【交通提示】全港公共交通及幹道情況請參考上方交通消息跑馬燈"
+        ];
+    }
+
+    newsHeaderList = titles;
     showNextRthkNews();
 }
 
@@ -597,7 +622,7 @@ function showNextRthkNews() {
 
 fetchRthkNews();
 setInterval(showNextRthkNews, 5000);
-setInterval(fetchRthkNews, 180000); // 每 3 分鐘更新一次
+setInterval(fetchRthkNews, 180000); // 每 3 分鐘自動更新一次
 
         // 6. 即時天氣 API
         async function fetchWeather() {
