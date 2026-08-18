@@ -524,79 +524,81 @@
         setInterval(showNextTrafficNews, 4000);
         setInterval(fetchTrafficNews, 300000);
 
-        // 5. 修復版即時新聞 API（多重代理與相容性解析）
-        var newsHeaderList = [];
-        var currentRthkIndex = 0;
+        // 5. 完全修復版即時新聞 API（採用 rss2json 穩定數據源）
+var newsHeaderList = [];
+var currentRthkIndex = 0;
 
-        async function fetchRthkNews() {
-            const targetRss = 'https://rss.rthk.hk/rss/news/express_local_chin.xml';
-            const proxies = [
-                `https://corsproxy.io/?${encodeURIComponent(targetRss)}`,
-                `https://api.allorigins.win/get?url=${encodeURIComponent(targetRss)}`
-            ];
+async function fetchRthkNews() {
+    const rssUrl = 'https://rss.rthk.hk/rss/news/express_local_chin.xml';
+    // 優先使用 rss2json 轉碼服務，備用使用 corsproxy.io
+    const endpoints = [
+        `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`,
+        `https://corsproxy.io/?${encodeURIComponent(rssUrl)}`
+    ];
 
-            for (let proxy of proxies) {
-                try {
-                    const res = await fetch(proxy);
-                    let xmlText = '';
+    for (let url of endpoints) {
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 6000); // 6秒超時
+            const res = await fetch(url, { signal: controller.signal });
+            clearTimeout(timeoutId);
 
-                    if (proxy.includes('allorigins')) {
-                        const data = await res.json();
-                        xmlText = data.contents;
-                    } else {
-                        xmlText = await res.text();
-                    }
-
-                    if (xmlText) {
-                        const parser = new DOMParser();
-                        const xmlDoc = parser.parseFromString(xmlText, "text/xml");
-                        const items = xmlDoc.getElementsByTagName("item");
-                        
-                        let loadedTitles = [];
-                        for (let i = 0; i < items.length; i++) {
-                            const titleEl = items[i].getElementsByTagName("title")[0];
-                            if (titleEl) {
-                                let text = titleEl.textContent.trim();
-                                if (text && !text.includes("香港電台")) {
-                                    loadedTitles.push(text);
-                                }
-                            }
-                        }
-                        
-                        if (loadedTitles.length > 0) {
-                            newsHeaderList = loadedTitles;
-                            break;
+            if (url.includes('rss2json')) {
+                const data = await res.json();
+                if (data.status === 'ok' && data.items && data.items.length > 0) {
+                    newsHeaderList = data.items.map(item => item.title.trim()).filter(t => t && !t.includes("香港電台"));
+                    if (newsHeaderList.length > 0) break;
+                }
+            } else {
+                const xmlText = await res.text();
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+                const items = xmlDoc.getElementsByTagName("item");
+                
+                let loadedTitles = [];
+                for (let i = 0; i < items.length; i++) {
+                    const titleEl = items[i].getElementsByTagName("title")[0];
+                    if (titleEl) {
+                        let text = titleEl.textContent.trim();
+                        if (text && !text.includes("香港電台")) {
+                            loadedTitles.push(text);
                         }
                     }
-                } catch (e) {
-                    console.warn(`News fetch failed via ${proxy}:`, e);
+                }
+                if (loadedTitles.length > 0) {
+                    newsHeaderList = loadedTitles;
+                    break;
                 }
             }
-
-            if (newsHeaderList.length === 0) {
-                newsHeaderList = [
-                    "港股今日表現反覆，市場關注最新經濟數據",
-                    "天文台發出最新天氣提示，提醒市民留意天色變化",
-                    "運輸署提醒駕駛人士留意各區主要幹道交通情況"
-                ];
-            }
-            showNextRthkNews();
+        } catch (e) {
+            console.warn(`RTHK News fetch failed via ${url}:`, e);
         }
+    }
 
-        function showNextRthkNews() {
-            if (newsHeaderList.length === 0) return;
-            var tickerEl = document.getElementById('rthk-news');
-            tickerEl.style.opacity = 0;
-            setTimeout(function() {
-                tickerEl.innerText = newsHeaderList[currentRthkIndex];
-                tickerEl.style.opacity = 1;
-                currentRthkIndex = (currentRthkIndex + 1) % newsHeaderList.length;
-            }, 300);
-        }
+    // 如果完全無法連線，顯示明確提示而非靜態語句
+    if (newsHeaderList.length === 0) {
+        newsHeaderList = ["即時新聞載入中，請稍後或按右上角重設..."];
+    }
+    
+    showNextRthkNews();
+}
 
-        fetchRthkNews();
-        setInterval(showNextRthkNews, 5000);
-        setInterval(fetchRthkNews, 300000);
+function showNextRthkNews() {
+    if (newsHeaderList.length === 0) return;
+    var tickerEl = document.getElementById('rthk-news');
+    if (!tickerEl) return;
+    
+    tickerEl.style.opacity = 0;
+    setTimeout(function() {
+        tickerEl.innerText = newsHeaderList[currentRthkIndex];
+        tickerEl.style.opacity = 1;
+        currentRthkIndex = (currentRthkIndex + 1) % newsHeaderList.length;
+    }, 300);
+}
+
+fetchRthkNews();
+setInterval(showNextRthkNews, 5000);
+setInterval(fetchRthkNews, 300000); // 每 5 分鐘刷新一次新聞數據
 
         // 6. 即時天氣 API
         async function fetchWeather() {
