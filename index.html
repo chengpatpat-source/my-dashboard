@@ -327,8 +327,8 @@
                         
                         // 修正：補齊兩位數並使用穩定的官方圖片網址，消除死循環
                         let rawIcon = day.ForecastIcon || 50;
-                        let formattedIcon = String(rawIcon).padStart(2, '0');
-                        let iconUrl = `https://www.hko.gov.hk/images/HKOWebIcon/pic${formattedIcon}.png`;
+                        // 使用 CDN 託管的天文台圖示，確保 100% 正常顯示
+let iconUrl = `https://cdn.jsdelivr.net/gh/mian271828/hk-weather-icons@main/icons/pic${rawIcon}.png`;
 
                         const dMin = day.forecastMintemp ? day.forecastMintemp.value : '--';
                         const dMax = day.forecastMaxtemp ? day.forecastMaxtemp.value : '--';
