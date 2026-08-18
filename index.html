@@ -31,7 +31,7 @@
         .clock { font-size: 3.5rem; font-weight: 700; color: #58a6ff; font-variant-numeric: tabular-nums; letter-spacing: 1px; }
         .date { font-size: 1.1rem; color: #8b949e; font-weight: 500; margin-top: 4px; }
         
-        /* 2. 跑馬燈區塊 (特別交通 & 即時新聞) */
+        /* 2. 跑馬燈區塊 */
         .ticker-card {
             background: #161b22;
             border: 1px solid #30363d;
@@ -108,7 +108,7 @@
         }
         .temp-display { font-size: 3.5rem; font-weight: 700; color: #f2cc60; line-height: 1; }
         .weather-status-text { 
-            font-size: 1.25rem; 
+            font-size: 1.1rem; 
             font-weight: 600; 
             color: #38bdf8; 
             background: #0d1117; 
@@ -143,8 +143,8 @@
         .forecast-rh { font-size: 0.75rem; color: #8b949e; margin-top: 4px; }
         .forecast-psr { font-size: 0.75rem; color: #38bdf8; margin-top: 2px; }
 
-        /* 交通到站 Box */
-        .eta-box { 
+        /* 交通 / 股票 Box */
+        .eta-box, .stock-box { 
             background: #0d1117; 
             border: 1px solid #21262d;
             border-left: 4px solid #38bdf8; 
@@ -156,10 +156,17 @@
             align-items: center;
         }
         .mtr-box { border-left-color: #f43f5e; }
-        .route-info { display: flex; flex-direction: column; gap: 2px; }
-        .route-name { font-size: 0.95rem; font-weight: 600; color: #f0f6fc; }
-        .stop-name { font-size: 0.75rem; color: #38bdf8; font-weight: 500; }
+        .stock-up { border-left-color: #22c55e; }
+        .stock-down { border-left-color: #f43f5e; }
+        
+        .route-info, .stock-info { display: flex; flex-direction: column; gap: 2px; }
+        .route-name, .stock-name { font-size: 0.95rem; font-weight: 600; color: #f0f6fc; }
+        .stop-name, .stock-symbol { font-size: 0.75rem; color: #8b949e; font-weight: 500; }
+        
         .eta-time { font-size: 1.05rem; font-weight: 700; color: #4ade80; font-variant-numeric: tabular-nums; }
+        .stock-price { font-size: 1.1rem; font-weight: 700; text-align: right; }
+        .price-up { color: #4ade80; }
+        .price-down { color: #f43f5e; }
         
         /* 按鈕與電台 Bar */
         .radio-bar { 
@@ -212,8 +219,9 @@
         </div>
     </div>
 
-    <!-- 3. 天氣與交通資訊區塊 -->
+    <!-- 3. 網格佈局 (天氣 / 交通 / 股票) -->
     <div class="main-grid">
+        
         <!-- 當日天氣卡片 -->
         <div class="card">
             <div class="card-title">CURRENT WEATHER</div>
@@ -225,6 +233,28 @@
             <div class="weather-info">
                 <span>相對濕度: <strong id="humidity">--%</strong></span>
             </div>
+        </div>
+
+        <!-- 即時股票及財經資訊卡片 -->
+        <div class="card">
+            <div class="card-title">STOCK MARKET (即時股票)</div>
+            
+            <!-- 股票動態搜尋列 -->
+            <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+                <input type="text" id="custom-stock-input" placeholder="輸入號碼 (例: 700, 9988, NVDA)" 
+                       style="flex: 1; padding: 8px 12px; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; color: #f0f6fc; font-size: 0.9rem; outline: none;"
+                       onkeypress="if(event.key === 'Enter') fetchStockPrice()">
+                <button class="btn" onclick="fetchStockPrice()" style="padding: 8px 12px; background: #238636; border-color: #2ea043; color: white;">查詢</button>
+            </div>
+
+            <!-- 動態搜尋結果顯示區 -->
+            <div id="search-stock-container"></div>
+
+            <hr style="border: 0; border-top: 1px solid #21262d; margin: 12px 0;">
+
+            <!-- 預設常用監控股票 -->
+            <div class="sub-section-title">焦點港股與指數</div>
+            <div id="default-stocks-container">載入股票數據中...</div>
         </div>
 
         <!-- 巴士到站卡片 (含即時搜尋列) -->
@@ -242,7 +272,7 @@
             <!-- 動態搜尋結果顯示區 -->
             <div id="custom-bus-container"></div>
 
-            <hr style="border: 0; border-top: 1px solid #21262d; margin: 16px 0;">
+            <hr style="border: 0; border-top: 1px solid #21262d; margin: 12px 0;">
 
             <!-- 預設常用路線 -->
             <div class="sub-section-title">A33X 路線</div>
@@ -252,20 +282,21 @@
             <div id="bus-e37-container">載入數據中...</div>
         </div>
 
-        <!-- 港鐵班次卡片 -->
+    </div>
+
+    <!-- 4. 港鐵班次卡片 & 未來 9 天天氣預報區塊 -->
+    <div class="main-grid">
         <div class="card">
             <div class="card-title">MTR SCHEDULE (屯門站)</div>
-            
             <div class="sub-section-title">由屯門站出發 (往烏溪沙方向)</div>
             <div id="mtr-departures-container">載入數據中...</div>
         </div>
-    </div>
 
-    <!-- 4. 未來 9 天天氣預報區塊 -->
-    <div class="card">
-        <div class="card-title">9-DAY WEATHER FORECAST (未來9天天氣預報)</div>
-        <div class="forecast-container" id="forecast-container">
-            載入預報數據中...
+        <div class="card" style="grid-column: span 2;">
+            <div class="card-title">9-DAY WEATHER FORECAST (未來9天天氣預報)</div>
+            <div class="forecast-container" id="forecast-container">
+                載入預報數據中...
+            </div>
         </div>
     </div>
 
@@ -297,19 +328,145 @@
         setInterval(updateClock, 1000);
         updateClock();
 
-        // 2. 天氣編號轉換 Emoji
-        function getWeatherEmoji(iconCode) {
-            const code = parseInt(iconCode, 10);
-            if ([50, 51].includes(code)) return '☀️'; 
-            if ([52, 53, 54, 60, 61].includes(code)) return '⛅'; 
-            if ([62, 63, 64, 65].includes(code)) return '🌧️'; 
-            if ([80, 81, 82, 83, 84, 85].includes(code)) return '⛈️'; 
-            if ([90, 91].includes(code)) return '🌤️'; 
-            if ([92, 93].includes(code)) return '🌬️'; 
-            return '🌤️';
+        // 2. 股票 API 查詢 (支援港股與美股)
+        function formatStockSymbol(input) {
+            let symbol = input.trim().toUpperCase();
+            if (/^\d{1,5}$/.test(symbol)) {
+                symbol = symbol.padStart(4, '0') + '.HK';
+            }
+            return symbol;
         }
 
-        // 3. 特別交通消息 API
+        async function getStockQuote(symbol) {
+            try {
+                const proxyUrl = 'https://api.allorigins.win/get?url=';
+                const targetUrl = encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1m&range=1d`);
+                const res = await fetch(proxyUrl + targetUrl);
+                const data = await res.json();
+                
+                if (data.contents) {
+                    const parsed = JSON.parse(data.contents);
+                    const meta = parsed.chart.result[0].meta;
+                    const price = meta.regularMarketPrice;
+                    const prevClose = meta.chartPreviousClose;
+                    const diff = price - prevClose;
+                    const percent = (diff / prevClose) * 100;
+                    
+                    return {
+                        symbol: meta.symbol,
+                        name: meta.shortName || meta.symbol,
+                        price: price.toFixed(2),
+                        diff: (diff >= 0 ? '+' : '') + diff.toFixed(2),
+                        percent: (diff >= 0 ? '+' : '') + percent.toFixed(2) + '%',
+                        isUp: diff >= 0
+                    };
+                }
+            } catch (e) {
+                console.error("Stock fetch error:", e);
+            }
+            return null;
+        }
+
+        async function fetchStockPrice() {
+            const inputEl = document.getElementById('custom-stock-input');
+            const containerEl = document.getElementById('search-stock-container');
+            const rawInput = inputEl.value;
+
+            if (!rawInput) {
+                containerEl.innerHTML = '<div style="color:#8b949e; font-size:0.85rem;">請輸入股票號碼</div>';
+                return;
+            }
+
+            containerEl.innerHTML = '<div style="color:#58a6ff; font-size:0.85rem;">查詢最新股價中...</div>';
+            const symbol = formatStockSymbol(rawInput);
+            const stock = await getStockQuote(symbol);
+
+            if (stock) {
+                const colorClass = stock.isUp ? 'price-up' : 'price-down';
+                const boxClass = stock.isUp ? 'stock-up' : 'stock-down';
+                containerEl.innerHTML = `
+                    <div class="stock-box ${boxClass}">
+                        <div class="stock-info">
+                            <span class="stock-name">${stock.name}</span>
+                            <span class="stock-symbol">${stock.symbol}</span>
+                        </div>
+                        <div class="stock-price ${colorClass}">
+                            $${stock.price}
+                            <div style="font-size:0.75rem;">${stock.diff} (${stock.percent})</div>
+                        </div>
+                    </div>`;
+            } else {
+                containerEl.innerHTML = `<div style="color:#f43f5e; font-size:0.85rem;">未能找到股票 ${rawInput} 的數據</div>`;
+            }
+        }
+
+        // 預設監視股票列表 (恒指, 騰訊, 阿里, 匯豐)
+        async function fetchDefaultStocks() {
+            const defaultSymbols = ['^HSI', '0700.HK', '9988.HK', '0005.HK'];
+            const containerEl = document.getElementById('default-stocks-container');
+            let html = '';
+
+            for (let sym of defaultSymbols) {
+                const stock = await getStockQuote(sym);
+                if (stock) {
+                    const colorClass = stock.isUp ? 'price-up' : 'price-down';
+                    const boxClass = stock.isUp ? 'stock-up' : 'stock-down';
+                    let displayName = stock.symbol === '^HSI' ? '恒生指數' : stock.name;
+                    
+                    html += `
+                        <div class="stock-box ${boxClass}">
+                            <div class="stock-info">
+                                <span class="stock-name">${displayName}</span>
+                                <span class="stock-symbol">${stock.symbol}</span>
+                            </div>
+                            <div class="stock-price ${colorClass}">
+                                $${stock.price}
+                                <div style="font-size:0.75rem;">${stock.diff} (${stock.percent})</div>
+                            </div>
+                        </div>`;
+                }
+            }
+            containerEl.innerHTML = html || '<div style="color:#8b949e">股票數據加載失敗</div>';
+        }
+        fetchDefaultStocks();
+        setInterval(fetchDefaultStocks, 60000);
+
+        // 3. 天氣編號對照表
+        const weatherIconMap = {
+            50: { emoji: '☀️', text: '陽光充沛' },
+            51: { emoji: '☀️', text: '大致天晴' },
+            52: { emoji: '⛅', text: '短暫陽光' },
+            53: { emoji: '🌤️', text: '間中有陽光' },
+            54: { emoji: '🌤️', text: '間中有陽光及有幾陣驟雨' },
+            60: { emoji: '☁️', text: '多雲' },
+            61: { emoji: '☁️', text: '密雲' },
+            62: { emoji: '🌧️', text: '微雨' },
+            63: { emoji: '🌧️', text: '有雨' },
+            64: { emoji: '🌧️', text: '大雨' },
+            65: { emoji: '⛈️', text: '雷暴' },
+            80: { emoji: '🌬️', text: '大風' },
+            81: { emoji: '🌫️', text: '乾燥' },
+            82: { emoji: '💧', text: '潮濕' },
+            83: { emoji: '🌫️', text: '霧' },
+            84: { emoji: '🌫️', text: '薄霧' },
+            85: { emoji: '🌫️', text: '煙霞' },
+            90: { emoji: '🌙', text: '天晴 (晚間)' },
+            91: { emoji: '🌕', text: '大致天晴 (晚間)' },
+            92: { emoji: '☁️', text: '多雲 (晚間)' },
+            93: { emoji: '🌧️', text: '有雨 (晚間)' }
+        };
+
+        function getWeatherEmoji(iconCode) {
+            const code = parseInt(iconCode, 10);
+            return (weatherIconMap[code] && weatherIconMap[code].emoji) ? weatherIconMap[code].emoji : '🌤️';
+        }
+
+        function getWeatherTextByIcon(iconCode) {
+            const code = parseInt(iconCode, 10);
+            return (weatherIconMap[code] && weatherIconMap[code].text) ? weatherIconMap[code].text : '大致多雲';
+        }
+
+        // 4. 特別交通消息 API
         var newsList = [];
         var currentNewsIndex = 0;
 
@@ -352,27 +509,40 @@
         setInterval(showNextTrafficNews, 4000);
         setInterval(fetchTrafficNews, 300000);
 
-        // 4. 即時新聞 (改用政府新聞網新聞 API，防跨域且穩定)
+        // 5. 即時新聞 API
         var newsHeaderList = [];
         var currentRthkIndex = 0;
 
         async function fetchRthkNews() {
             try {
-                const res = await fetch('https://www me.news.gov.hk/tc/categories/financial/html/articlelist.json').catch(() => null);
-                // 備用開放 API：政府新聞網熱門要聞
-                const resTop = await fetch('https://www.news.gov.hk/tc/common/html/topstories.json');
-                const data = await resTop.json();
+                const res = await fetch(`https://api.allorigins.win/get?url=https%3A%2F%2Frss.rthk.hk%2Frss%2Fnews%2Fexpress_local_chin.xml`);
+                const data = await res.json();
                 
-                if (data && data.length > 0) {
-                    newsHeaderList = data.map(item => item.title);
-                } else {
-                    newsHeaderList = ["即時新聞載入中..."];
+                if (data.contents) {
+                    const parser = new DOMParser();
+                    const xmlDoc = parser.parseFromString(data.contents, "text/xml");
+                    const titles = xmlDoc.getElementsByTagName("title");
+                    
+                    let loadedTitles = [];
+                    for (let i = 0; i < titles.length; i++) {
+                        let text = titles[i].textContent.trim();
+                        if (text && text !== "香港電台 - 即時新聞" && text !== "RTHK Express News") {
+                            loadedTitles.push(text);
+                        }
+                    }
+                    if (loadedTitles.length > 0) {
+                        newsHeaderList = loadedTitles;
+                    }
                 }
             } catch (e) {
+                console.error("News fetch error:", e);
+            }
+
+            if (newsHeaderList.length === 0) {
                 newsHeaderList = [
-                    "港股今日高低點震盪，市場關注最新經濟數據",
-                    "天文台預料未來數天天氣大致天晴及炎熱",
-                    "運輸署提醒市民留意即時交通及特別安排"
+                    "港股今日表現反覆，市場關注最新經濟數據",
+                    "天文台發出最新天氣提示，提醒市民留意天色變化",
+                    "運輸署提醒駕駛人士留意各區主要幹道交通情況"
                 ];
             }
             showNextRthkNews();
@@ -393,7 +563,7 @@
         setInterval(showNextRthkNews, 5000);
         setInterval(fetchRthkNews, 600000);
 
-        // 5. 即時天氣 API
+        // 6. 即時天氣 API
         async function fetchWeather() {
             try {
                 const res = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=tc');
@@ -406,12 +576,16 @@
                     document.getElementById('humidity').innerText = data.humidity.data[0].value + '%';
                 }
                 
+                let statusText = "";
                 if(data.weatherOverview && data.weatherOverview.trim() !== "") {
-                    document.getElementById('weather-desc').innerText = data.weatherOverview;
-                } else if(data.icon) {
-                    const iconMap = { 50: "陽光充沛", 51: "大致天晴", 52: "短暫陽光", 60: "多雲", 62: "微雨", 63: "有雨", 64: "大雨", 65: "雷暴" };
-                    document.getElementById('weather-desc').innerText = iconMap[data.icon[0]] || "多雲";
+                    statusText = data.weatherOverview.trim();
+                } else if(data.icon && data.icon.length > 0) {
+                    statusText = getWeatherTextByIcon(data.icon[0]);
+                } else {
+                    statusText = "大致多雲";
                 }
+                document.getElementById('weather-desc').innerText = statusText;
+
             } catch(e) { console.error("rhrread error:", e); }
 
             // 9 天天氣預報
@@ -457,7 +631,7 @@
         fetchWeather();
         setInterval(fetchWeather, 600000);
 
-        // 6. 動態搜尋自訂巴士路線
+        // 7. 動態搜尋自訂巴士路線
         async function fetchCustomBusEta() {
             const inputEl = document.getElementById('custom-bus-input');
             const containerEl = document.getElementById('custom-bus-container');
@@ -504,9 +678,8 @@
             }
         }
 
-        // 7. 九巴預設路線 (A33X & E37)
+        // 8. 九巴預設路線
         async function fetchBusEta() {
-            // A33X
             try {
                 const res = await fetch('https://data.etabus.gov.hk/v1/transport/kmb/route-eta/A33X/1');
                 const data = await res.json();
@@ -530,11 +703,8 @@
                     });
                 }
                 document.getElementById('bus-a33x-container').innerHTML = html;
-            } catch(e) { 
-                document.getElementById('bus-a33x-container').innerText = '數據加載失敗'; 
-            }
+            } catch(e) { document.getElementById('bus-a33x-container').innerText = '數據加載失敗'; }
 
-            // E37
             try {
                 const resE37 = await fetch('https://data.etabus.gov.hk/v1/transport/kmb/route-eta/E37/1');
                 const dataE37 = await resE37.json();
@@ -558,14 +728,12 @@
                     });
                 }
                 document.getElementById('bus-e37-container').innerHTML = htmlE37;
-            } catch(e) { 
-                document.getElementById('bus-e37-container').innerText = '數據加載失敗'; 
-            }
+            } catch(e) { document.getElementById('bus-e37-container').innerText = '數據加載失敗'; }
         }
         fetchBusEta();
         setInterval(fetchBusEta, 30000);
 
-        // 8. 港鐵 API (屯馬綫 - 屯門站)
+        // 9. 港鐵 API
         async function fetchMtrEta() {
             const line = 'TML'; 
             const sta = 'TUM';  
@@ -602,7 +770,7 @@
         fetchMtrEta();
         setInterval(fetchMtrEta, 30000);
 
-        // 9. 電台播放
+        // 10. 電台播放
         function playRadio(url) {
             var player = document.getElementById('audio-player');
             player.src = url;
