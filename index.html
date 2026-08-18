@@ -224,7 +224,7 @@
         
         <!-- 當日天氣卡片 -->
         <div class="card">
-            <div class="card-title">CURRENT WEATHER 本港現時氣溫</div>
+            <div class="card-title">CURRENT WEATHER</div>
             <div class="weather-desc-box">
                 <div class="temp-display" id="temp">--°C</div>
                 <div class="weather-status-text" id="weather-desc">載入中...</div>
@@ -241,7 +241,7 @@
             
             <!-- 股票動態搜尋列 -->
             <div style="display: flex; gap: 8px; margin-bottom: 16px;">
-                <input type="text" id="custom-stock-input" placeholder="輸入號碼 (例: 700, 9988, NVDA)" 
+                <input type="text" id="custom-stock-input" placeholder="輸入號碼 (例: 6616, 700, NVDA)" 
                        style="flex: 1; padding: 8px 12px; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; color: #f0f6fc; font-size: 0.9rem; outline: none;"
                        onkeypress="if(event.key === 'Enter') fetchStockPrice()">
                 <button class="btn" onclick="fetchStockPrice()" style="padding: 8px 12px; background: #238636; border-color: #2ea043; color: white;">查詢</button>
@@ -257,9 +257,9 @@
             <div id="default-stocks-container">載入股票數據中...</div>
         </div>
 
-        <!-- 巴士到站卡片 (含即時搜尋列) -->
+        <!-- 巴士到站卡片 -->
         <div class="card">
-            <div class="card-title">BUS DEPARTURES 巴士到站時間</div>
+            <div class="card-title">BUS DEPARTURES</div>
             
             <!-- 動態搜尋列 -->
             <div style="display: flex; gap: 8px; margin-bottom: 16px;">
@@ -328,41 +328,56 @@
         setInterval(updateClock, 1000);
         updateClock();
 
-        // 2. 股票 API 查詢 (支援港股與美股)
+        // 2. 股票 API 查詢 (支援 5 位數港股如 6616 -> 06616.HK 與美股)
         function formatStockSymbol(input) {
             let symbol = input.trim().toUpperCase();
             if (/^\d{1,5}$/.test(symbol)) {
-                symbol = symbol.padStart(4, '0') + '.HK';
+                // 正確補足至 5 位數港股代號 (如 6616 -> 06616.HK)
+                symbol = symbol.padStart(5, '0') + '.HK';
             }
             return symbol;
         }
 
         async function getStockQuote(symbol) {
-            try {
-                const proxyUrl = 'https://api.allorigins.win/get?url=';
-                const targetUrl = encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1m&range=1d`);
-                const res = await fetch(proxyUrl + targetUrl);
-                const data = await res.json();
-                
-                if (data.contents) {
-                    const parsed = JSON.parse(data.contents);
-                    const meta = parsed.chart.result[0].meta;
-                    const price = meta.regularMarketPrice;
-                    const prevClose = meta.chartPreviousClose;
-                    const diff = price - prevClose;
-                    const percent = (diff / prevClose) * 100;
-                    
-                    return {
-                        symbol: meta.symbol,
-                        name: meta.shortName || meta.symbol,
-                        price: price.toFixed(2),
-                        diff: (diff >= 0 ? '+' : '') + diff.toFixed(2),
-                        percent: (diff >= 0 ? '+' : '') + percent.toFixed(2) + '%',
-                        isUp: diff >= 0
-                    };
+            const proxyList = [
+                `https://corsproxy.io/?${encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/' + symbol + '?interval=1m&range=1d')}`,
+                `https://api.allorigins.win/get?url=${encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/' + symbol + '?interval=1m&range=1d')}`
+            ];
+
+            for (let url of proxyList) {
+                try {
+                    const controller = new AbortController();
+                    const id = setTimeout(() => controller.abort(), 6000); // 6秒逾時自動切換
+                    const res = await fetch(url, { signal: controller.signal });
+                    clearTimeout(id);
+
+                    let parsed = null;
+                    if (url.includes('allorigins')) {
+                        const data = await res.json();
+                        if (data.contents) parsed = JSON.parse(data.contents);
+                    } else {
+                        parsed = await res.json();
+                    }
+
+                    if (parsed && parsed.chart && parsed.chart.result && parsed.chart.result.length > 0) {
+                        const meta = parsed.chart.result[0].meta;
+                        const price = meta.regularMarketPrice;
+                        const prevClose = meta.chartPreviousClose || meta.previousClose;
+                        const diff = price - prevClose;
+                        const percent = (diff / prevClose) * 100;
+                        
+                        return {
+                            symbol: meta.symbol,
+                            name: meta.shortName || meta.longName || meta.symbol,
+                            price: price.toFixed(2),
+                            diff: (diff >= 0 ? '+' : '') + diff.toFixed(2),
+                            percent: (diff >= 0 ? '+' : '') + percent.toFixed(2) + '%',
+                            isUp: diff >= 0
+                        };
+                    }
+                } catch (e) {
+                    console.warn(`Attempt failed for stock ${symbol} via ${url}:`, e);
                 }
-            } catch (e) {
-                console.error("Stock fetch error:", e);
             }
             return null;
         }
@@ -396,11 +411,11 @@
                         </div>
                     </div>`;
             } else {
-                containerEl.innerHTML = `<div style="color:#f43f5e; font-size:0.85rem;">未能找到股票 ${rawInput} 的數據</div>`;
+                containerEl.innerHTML = `<div style="color:#f43f5e; font-size:0.85rem;">未能找到股票 ${rawInput} (${symbol}) 的數據，請檢查號碼。</div>`;
             }
         }
 
-        // 預設監視股票列表 (恒指, 騰訊, 阿里, 匯豐)
+        // 預設監視股票列表
         async function fetchDefaultStocks() {
             const defaultSymbols = ['^HSI', '0700.HK', '9988.HK', '0005.HK'];
             const containerEl = document.getElementById('default-stocks-container');
@@ -509,33 +524,53 @@
         setInterval(showNextTrafficNews, 4000);
         setInterval(fetchTrafficNews, 300000);
 
-        // 5. 即時新聞 API
+        // 5. 修復版即時新聞 API（多重代理與相容性解析）
         var newsHeaderList = [];
         var currentRthkIndex = 0;
 
         async function fetchRthkNews() {
-            try {
-                const res = await fetch(`https://api.allorigins.win/get?url=https%3A%2F%2Frss.rthk.hk%2Frss%2Fnews%2Fexpress_local_chin.xml`);
-                const data = await res.json();
-                
-                if (data.contents) {
-                    const parser = new DOMParser();
-                    const xmlDoc = parser.parseFromString(data.contents, "text/xml");
-                    const titles = xmlDoc.getElementsByTagName("title");
-                    
-                    let loadedTitles = [];
-                    for (let i = 0; i < titles.length; i++) {
-                        let text = titles[i].textContent.trim();
-                        if (text && text !== "香港電台 - 即時新聞" && text !== "RTHK Express News") {
-                            loadedTitles.push(text);
+            const targetRss = 'https://rss.rthk.hk/rss/news/express_local_chin.xml';
+            const proxies = [
+                `https://corsproxy.io/?${encodeURIComponent(targetRss)}`,
+                `https://api.allorigins.win/get?url=${encodeURIComponent(targetRss)}`
+            ];
+
+            for (let proxy of proxies) {
+                try {
+                    const res = await fetch(proxy);
+                    let xmlText = '';
+
+                    if (proxy.includes('allorigins')) {
+                        const data = await res.json();
+                        xmlText = data.contents;
+                    } else {
+                        xmlText = await res.text();
+                    }
+
+                    if (xmlText) {
+                        const parser = new DOMParser();
+                        const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+                        const items = xmlDoc.getElementsByTagName("item");
+                        
+                        let loadedTitles = [];
+                        for (let i = 0; i < items.length; i++) {
+                            const titleEl = items[i].getElementsByTagName("title")[0];
+                            if (titleEl) {
+                                let text = titleEl.textContent.trim();
+                                if (text && !text.includes("香港電台")) {
+                                    loadedTitles.push(text);
+                                }
+                            }
+                        }
+                        
+                        if (loadedTitles.length > 0) {
+                            newsHeaderList = loadedTitles;
+                            break;
                         }
                     }
-                    if (loadedTitles.length > 0) {
-                        newsHeaderList = loadedTitles;
-                    }
+                } catch (e) {
+                    console.warn(`News fetch failed via ${proxy}:`, e);
                 }
-            } catch (e) {
-                console.error("News fetch error:", e);
             }
 
             if (newsHeaderList.length === 0) {
@@ -561,7 +596,7 @@
 
         fetchRthkNews();
         setInterval(showNextRthkNews, 5000);
-        setInterval(fetchRthkNews, 600000);
+        setInterval(fetchRthkNews, 300000);
 
         // 6. 即時天氣 API
         async function fetchWeather() {
