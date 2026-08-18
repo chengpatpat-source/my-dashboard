@@ -3,37 +3,106 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Personal Dashboard</title>
+    <title>Pro Executive Dashboard</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        body { background-color: #fff0f3; color: #333; padding: 20px; display: flex; flex-direction: column; gap: 20px; max-width: 1100px; margin: 0 auto; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif; }
         
-        /* 頂部時鐘列 */
-        .header { background: #ffffff; padding: 20px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
-        .clock { font-size: 3rem; font-weight: bold; color: #0077b6; }
-        .date { font-size: 1.2rem; color: #ff758f; font-weight: 600; }
+        /* 專業深色背景 */
+        body { 
+            background-color: #0d1117; 
+            color: #c9d1d9; 
+            padding: 24px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 20px; 
+            max-width: 1200px; 
+            margin: 0 auto; 
+        }
         
-        /* 三欄/雙欄響應式佈局 */
-        .main-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        /* 頂部時鐘 Header */
+        .header { 
+            background: #161b22; 
+            border: 1px solid #30363d;
+            padding: 24px 30px; 
+            border-radius: 12px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+        }
+        .clock { font-size: 3.5rem; font-weight: 700; color: #58a6ff; font-variant-numeric: tabular-nums; letter-spacing: 1px; }
+        .date { font-size: 1.1rem; color: #8b949e; font-weight: 500; margin-top: 4px; }
         
-        /* 卡片通用樣式 */
-        .card { background: #ffffff; padding: 20px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .card-title { font-size: 1.1rem; font-weight: bold; margin-bottom: 15px; color: #444; display: flex; align-items: center; gap: 8px; }
+        /* 網格佈局 */
+        .main-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
+        
+        /* 專業卡片樣式 */
+        .card { 
+            background: #161b22; 
+            border: 1px solid #30363d;
+            padding: 24px; 
+            border-radius: 12px; 
+        }
+        .card-title { 
+            font-size: 1rem; 
+            font-weight: 600; 
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 20px; 
+            color: #8b949e; 
+            display: flex; 
+            align-items: center; 
+            gap: 10px; 
+        }
         
         /* 天氣樣式 */
-        .temp-display { font-size: 3.5rem; font-weight: bold; color: #fb8500; margin: 10px 0; }
-        .weather-info { display: flex; gap: 15px; font-size: 0.95rem; color: #666; margin-top: 10px; }
+        .temp-display { font-size: 3.8rem; font-weight: 700; color: #f2cc60; line-height: 1; margin: 10px 0; }
+        .weather-info { display: flex; gap: 20px; font-size: 0.95rem; color: #8b949e; margin-top: 15px; }
+        .weather-info strong { color: #f0f6fc; }
         
-        /* 交通 ETA 樣式 */
-        .eta-box { background: #f8f9fa; border-radius: 12px; padding: 12px; margin-bottom: 10px; border-left: 5px solid #0077b6; }
-        .mtr-box { border-left-color: #9e2a2b; } /* 港鐵專用配色 */
-        .route-name { font-size: 1.1rem; font-weight: bold; color: #333; }
-        .eta-time { font-size: 1.1rem; font-weight: bold; color: #2a9d8f; float: right; }
+        /* 交通到站 Box */
+        .eta-box { 
+            background: #0d1117; 
+            border: 1px solid #21262d;
+            border-left: 4px solid #38bdf8; 
+            border-radius: 8px; 
+            padding: 14px 16px; 
+            margin-bottom: 12px; 
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .mtr-box { border-left-color: #f43f5e; } /* 港鐵專用紅邊 */
+        .route-name { font-size: 1rem; font-weight: 600; color: #f0f6fc; }
+        .eta-time { font-size: 1.1rem; font-weight: 700; color: #4ade80; font-variant-numeric: tabular-nums; }
         
-        /* 電台控制列 */
-        .radio-bar { background: #ffffff; padding: 15px 20px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
-        .radio-btn { background: #ff758f; color: white; border: none; padding: 8px 16px; border-radius: 20px; font-weight: bold; cursor: pointer; }
-        .radio-btn:hover { background: #ff4d6d; }
+        /* 按鈕與電台 Bar */
+        .radio-bar { 
+            background: #161b22; 
+            border: 1px solid #30363d;
+            padding: 18px 24px; 
+            border-radius: 12px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            flex-wrap: wrap; 
+            gap: 15px; 
+        }
+        .btn { 
+            background: #21262d; 
+            color: #c9d1d9; 
+            border: 1px solid #363b42; 
+            padding: 8px 16px; 
+            border-radius: 6px; 
+            font-size: 0.9rem;
+            font-weight: 500; 
+            cursor: pointer; 
+            transition: all 0.2s;
+        }
+        .btn:hover { background: #30363d; color: #f0f6fc; border-color: #8b949e; }
+        .btn-primary { background: #238636; color: #ffffff; border: none; }
+        .btn-primary:hover { background: #2ea043; }
+        
+        audio { height: 32px; filter: invert(0.9); } /* 適應深色主題的播放器 */
     </style>
 </head>
 <body>
@@ -44,41 +113,41 @@
             <div class="clock" id="clock">00:00:00</div>
             <div class="date" id="date">----年--月--日</div>
         </div>
-        <button class="radio-btn" onclick="location.reload()">↺ 更新</button>
+        <button class="btn" onclick="location.reload()">↺ 系統更新</button>
     </div>
 
     <!-- 多欄資訊區塊 -->
     <div class="main-grid">
         <!-- 1. 天氣卡片 -->
         <div class="card">
-            <div class="card-title">☀️ 香港即時天氣</div>
+            <div class="card-title">WEATHER METRICS</div>
             <div class="temp-display" id="temp">--°C</div>
             <div class="weather-info">
                 <span>相對濕度: <strong id="humidity">--%</strong></span>
             </div>
         </div>
 
-        <!-- 2. 巴士到站卡片 (九巴 64K) -->
+        <!-- 2. 巴士到站卡片 -->
         <div class="card">
-            <div class="card-title">🚌 九巴 64K 到站時間</div>
-            <div id="bus-eta-container">載入中...</div>
+            <div class="card-title">BUS DEPARTURES (64K)</div>
+            <div id="bus-eta-container">載入數據中...</div>
         </div>
 
-        <!-- 3. 港鐵班次卡片 (東鐵綫 - 太和站) -->
+        <!-- 3. 港鐵班次卡片 -->
         <div class="card">
-            <div class="card-title">🚇 港鐵到站時間 (太和站)</div>
-            <div id="mtr-eta-container">載入中...</div>
+            <div class="card-title">MTR SCHEDULE (太和站)</div>
+            <div id="mtr-eta-container">載入數據中...</div>
         </div>
     </div>
 
     <!-- 底部電台播放器 -->
     <div class="radio-bar">
-        <span style="font-weight:bold;">📻 直播電台</span>
-        <div>
-            <button class="radio-btn" onclick="playRadio('https://rthk.hk/live/radio1.m3u8')">RTHK 1</button>
-            <button class="radio-btn" onclick="playRadio('https://rthk.hk/live/radio2.m3u8')">RTHK 2</button>
+        <span style="font-weight:600; font-size:0.95rem; color:#8b949e;">LIVE BROADCAST</span>
+        <div style="display:flex; gap:10px;">
+            <button class="btn" onclick="playRadio('https://rthk.hk/live/radio1.m3u8')">RTHK 1</button>
+            <button class="btn" onclick="playRadio('https://rthk.hk/live/radio2.m3u8')">RTHK 2</button>
         </div>
-        <audio id="audio-player" controls style="height:30px;"></audio>
+        <audio id="audio-player" controls></audio>
     </div>
 
     <script>
@@ -94,7 +163,7 @@
             var month = String(now.getMonth() + 1).padStart(2, '0');
             var date = String(now.getDate()).padStart(2, '0');
             var days = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
-            document.getElementById('date').innerText = year + '年' + month + '月' + date + '日 (' + days[now.getDay()] + ')';
+            document.getElementById('date').innerText = year + ' 年 ' + month + ' 月 ' + date + ' 日 ' + days[now.getDay()];
         }
         setInterval(updateClock, 1000);
         updateClock();
@@ -124,7 +193,7 @@
                 const etas = data.data.filter(item => item.route === '64K').slice(0, 2);
                 
                 let html = '';
-                if(etas.length === 0) { html = '<div>暫無班次</div>'; } 
+                if(etas.length === 0) { html = '<div style="color:#8b949e">目前無即時班次</div>'; } 
                 else {
                     etas.forEach(eta => {
                         const etaTime = eta.eta ? new Date(eta.eta).toTimeString().substring(0, 5) : '未知';
@@ -132,45 +201,43 @@
                     });
                 }
                 document.getElementById('bus-eta-container').innerHTML = html;
-            } catch(e) { document.getElementById('bus-eta-container').innerText = '載入失敗'; }
+            } catch(e) { document.getElementById('bus-eta-container').innerText = '數據加載失敗'; }
         }
         fetchBusEta();
         setInterval(fetchBusEta, 30000);
 
-        // 4. 港鐵 API (以東鐵綫太和站 TAW/TWO 為例，這裡設為 EAL + TWO)
+        // 4. 港鐵 API (東鐵綫太和站)
         async function fetchMtrEta() {
-            const line = 'EAL'; // 東鐵綫
-            const sta = 'TWO';  // 太和站
+            const line = 'EAL';
+            const sta = 'TWO';
             try {
-                const res = await fetch(`https://rt.data.data.gov.hk/v1/transport/mtr/getSchedule.php?line=${line}&sta=${sta}`);
+                const res = await fetch(`https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php?line=${line}&sta=${sta}`);
                 const data = await res.json();
                 
                 let html = '';
                 if (data.status === 1 && data.data[`${line}-${sta}`]) {
                     const stationData = data.data[`${line}-${sta}`];
                     
-                    // 上行 (UP - 往羅湖/落馬洲) 抓取最新 1 班
                     if (stationData.UP && stationData.UP.length > 0) {
                         const nextUp = stationData.UP[0];
-                        const min = nextUp.ttnt ? `${nextUp.ttnt} 分鐘` : '即將到達';
-                        html += `<div class="eta-box mtr-box"><span class="route-name">往北行 (羅湖/落馬洲)</span><span class="eta-time">${min}</span></div>`;
+                        const min = nextUp.ttnt ? `${nextUp.ttnt} mins` : '即將到達';
+                        html += `<div class="eta-box mtr-box"><span class="route-name">往 羅湖/落馬洲</span><span class="eta-time">${min}</span></div>`;
                     }
                     
-                    // 下行 (DOWN - 往金鐘) 抓取最新 1 班
                     if (stationData.DOWN && stationData.DOWN.length > 0) {
                         const nextDown = stationData.DOWN[0];
-                        const min = nextDown.ttnt ? `${nextDown.ttnt} 分鐘` : '即將到達';
-                        html += `<div class="eta-box mtr-box"><span class="route-name">往南行 (金鐘)</span><span class="eta-time">${min}</span></div>`;
+                        const min = nextDown.ttnt ? `${nextDown.ttnt} mins` : '即將到達';
+                        html += `<div class="eta-box mtr-box"><span class="route-name">往 金鐘</span><span class="eta-time">${min}</span></div>`;
                     }
                 }
                 
-                document.getElementById('mtr-eta-container').innerHTML = html || '<div>目前沒有班次數據</div>';
+                document.getElementById('mtr-eta-container').innerHTML = html || '<div style="color:#8b949e">目前無班次數據</div>';
             } catch(e) {
-                document.getElementById('mtr-eta-container').innerText = '港鐵資料載入失敗';
+                document.getElementById('mtr-eta-container').innerText = '數據加載失敗';
             }
         }
         fetchMtrEta();
-        setInterval(fetchMtrEta, 30000); // 30秒更新一次
+        setInterval(fetchMtrEta, 30000);
 
         // 5. 電台播放
         function playRadio(url) {
