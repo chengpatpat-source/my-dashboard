@@ -524,62 +524,72 @@
         setInterval(showNextTrafficNews, 4000);
         setInterval(fetchTrafficNews, 300000);
 
-        // 5. 完全修復版即時新聞 API（採用 rss2json 穩定數據源）
+        // 5. 終極修復版即時新聞 API（多重 CORS 代理 + XML 實體解碼）
 var newsHeaderList = [];
 var currentRthkIndex = 0;
 
+function decodeHtmlEntities(text) {
+    var txt = document.createElement("textarea");
+    txt.innerHTML = text;
+    return txt.value;
+}
+
 async function fetchRthkNews() {
     const rssUrl = 'https://rss.rthk.hk/rss/news/express_local_chin.xml';
-    // 優先使用 rss2json 轉碼服務，備用使用 corsproxy.io
-    const endpoints = [
-        `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`,
-        `https://corsproxy.io/?${encodeURIComponent(rssUrl)}`
+    
+    // 使用可靠的免費 CORS 代理鏈
+    const proxies = [
+        `https://api.allorigins.win/get?url=${encodeURIComponent(rssUrl)}`,
+        `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(rssUrl)}`
     ];
 
-    for (let url of endpoints) {
+    let fetchedTitles = [];
+
+    for (let proxy of proxies) {
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 6000); // 6秒超時
-            const res = await fetch(url, { signal: controller.signal });
+            const timeoutId = setTimeout(() => controller.abort(), 8000);
+            const res = await fetch(proxy, { signal: controller.signal });
             clearTimeout(timeoutId);
 
-            if (url.includes('rss2json')) {
+            let xmlText = '';
+            if (proxy.includes('allorigins')) {
                 const data = await res.json();
-                if (data.status === 'ok' && data.items && data.items.length > 0) {
-                    newsHeaderList = data.items.map(item => item.title.trim()).filter(t => t && !t.includes("香港電台"));
-                    if (newsHeaderList.length > 0) break;
-                }
+                xmlText = data.contents;
             } else {
-                const xmlText = await res.text();
+                xmlText = await res.text();
+            }
+
+            if (xmlText && xmlText.includes('<item>')) {
                 const parser = new DOMParser();
                 const xmlDoc = parser.parseFromString(xmlText, "text/xml");
                 const items = xmlDoc.getElementsByTagName("item");
-                
-                let loadedTitles = [];
+
                 for (let i = 0; i < items.length; i++) {
                     const titleEl = items[i].getElementsByTagName("title")[0];
                     if (titleEl) {
                         let text = titleEl.textContent.trim();
+                        text = decodeHtmlEntities(text);
                         if (text && !text.includes("香港電台")) {
-                            loadedTitles.push(text);
+                            fetchedTitles.push(text);
                         }
                     }
                 }
-                if (loadedTitles.length > 0) {
-                    newsHeaderList = loadedTitles;
+
+                if (fetchedTitles.length > 0) {
+                    newsHeaderList = fetchedTitles;
                     break;
                 }
             }
         } catch (e) {
-            console.warn(`RTHK News fetch failed via ${url}:`, e);
+            console.warn(`RTHK fetch failed via ${proxy}:`, e);
         }
     }
 
-    // 如果完全無法連線，顯示明確提示而非靜態語句
     if (newsHeaderList.length === 0) {
-        newsHeaderList = ["即時新聞載入中，請稍後或按右上角重設..."];
+        newsHeaderList = ["最新新聞更新中，請確認網路連線或稍後刷新..."];
     }
-    
+
     showNextRthkNews();
 }
 
@@ -598,7 +608,7 @@ function showNextRthkNews() {
 
 fetchRthkNews();
 setInterval(showNextRthkNews, 5000);
-setInterval(fetchRthkNews, 300000); // 每 5 分鐘刷新一次新聞數據
+setInterval(fetchRthkNews, 180000); // 每 3 分鐘自動更新一次最新新聞
 
         // 6. 即時天氣 API
         async function fetchWeather() {
