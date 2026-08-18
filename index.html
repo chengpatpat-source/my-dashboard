@@ -224,7 +224,7 @@
         
         <!-- 當日天氣卡片 -->
         <div class="card">
-            <div class="card-title">CURRENT WEATHER 現時本港氣溫</div>
+            <div class="card-title">CURRENT WEATHER</div>
             <div class="weather-desc-box">
                 <div class="temp-display" id="temp">--°C</div>
                 <div class="weather-status-text" id="weather-desc">載入中...</div>
@@ -259,7 +259,7 @@
 
         <!-- 巴士到站卡片 -->
         <div class="card">
-            <div class="card-title">BUS DEPARTURES 巴士到站/開出時間</div>
+            <div class="card-title">BUS DEPARTURES</div>
             
             <!-- 動態搜尋列 -->
             <div style="display: flex; gap: 8px; margin-bottom: 16px;">
@@ -300,12 +300,12 @@
         </div>
     </div>
 
-    <!-- 5. 底部電台播放器 -->
+    <!-- 5. 底部電台播放器 (修改 onclick 網址處) -->
     <div class="radio-bar">
         <span style="font-weight:600; font-size:0.95rem; color:#8b949e;">LIVE BROADCAST</span>
         <div style="display:flex; gap:10px;">
-            <button class="btn" onclick="playRadio('https://rthk.hk/live/radio1.m3u8')">RTHK 1</button>
-            <button class="btn" onclick="playRadio('https://rthk.hk/live/radio2.m3u8')">RTHK 2</button>
+            <button class="btn" onclick="playRadio('https://stream.zeno.fm/f3wvbbqmdg8uv')">廣播電台 1</button>
+            <button class="btn" onclick="playRadio('https://stream.zeno.fm/0r23447334duv')">廣播電台 2</button>
         </div>
         <audio id="audio-player" controls></audio>
     </div>
@@ -332,7 +332,6 @@
         function formatStockSymbol(input) {
             let symbol = input.trim().toUpperCase();
             if (/^\d{1,5}$/.test(symbol)) {
-                // 正確補足至 5 位數港股代號 (如 6616 -> 06616.HK)
                 symbol = symbol.padStart(5, '0') + '.HK';
             }
             return symbol;
@@ -347,7 +346,7 @@
             for (let url of proxyList) {
                 try {
                     const controller = new AbortController();
-                    const id = setTimeout(() => controller.abort(), 6000); // 6秒逾時自動切換
+                    const id = setTimeout(() => controller.abort(), 6000);
                     const res = await fetch(url, { signal: controller.signal });
                     clearTimeout(id);
 
@@ -415,9 +414,9 @@
             }
         }
 
-        // 預設監視股票列表
+        // 預設監控股票列表
         async function fetchDefaultStocks() {
-            const defaultSymbols = ['^HSI', '0700.HK', '9988.HK', '0005.HK'];
+            const defaultSymbols = ['^HSI', '6616.HK', '0700.HK', '9988.HK', '0005.HK'];
             const containerEl = document.getElementById('default-stocks-container');
             let html = '';
 
@@ -446,7 +445,7 @@
         fetchDefaultStocks();
         setInterval(fetchDefaultStocks, 60000);
 
-        // 3. 天氣編號對照表
+        // 3. 天氣圖示對照
         const weatherIconMap = {
             50: { emoji: '☀️', text: '陽光充沛' },
             51: { emoji: '☀️', text: '大致天晴' },
@@ -481,134 +480,95 @@
             return (weatherIconMap[code] && weatherIconMap[code].text) ? weatherIconMap[code].text : '大致多雲';
         }
 
-        // =========================================================
-// 4. 特別交通消息 (第二代 JSON API - 100% 免 CORS 阻擋)
-// =========================================================
-var newsList = [];
-var currentNewsIndex = 0;
+        // 4. 特別交通消息 API
+        var newsList = [];
+        var currentNewsIndex = 0;
 
-async function fetchTrafficNews() {
-    try {
-        // 使用運輸署第二代特別交通消息 JSON 介面
-        const res = await fetch('https://app.td.gov.hk/file/tis/stm_feed.json');
-        const data = await res.json();
-        
-        let loadedNews = [];
-        if (data && data.body) {
-            // 解析第二代消息內容
-            data.body.forEach(item => {
-                if (item.content) {
-                    let text = item.content.replace(/<[^>]*>?/gm, '').trim(); // 清除 HTML 標籤
-                    if (text) loadedNews.push(text);
+        async function fetchTrafficNews() {
+            try {
+                const res = await fetch('https://wear.td.gov.hk/tis/tis_stm_feed.xml');
+                const text = await res.text();
+                
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(text, "text/xml");
+                const items = xmlDoc.getElementsByTagName("body");
+                
+                let loadedNews = [];
+                for (let i = 0; i < items.length; i++) {
+                    let newsText = items[i].textContent.trim();
+                    if (newsText) {
+                        newsText = newsText.replace(/\s+/g, ' ');
+                        loadedNews.push(newsText);
+                    }
                 }
-            });
+                newsList = loadedNews.length > 0 ? loadedNews : ["目前全港交通情況大致正常，暫無特別交通消息。"];
+            } catch (e) {
+                newsList = ["目前全港交通情況大致正常，暫無特別交通消息。"];
+            }
+            showNextTrafficNews();
         }
-        
-        newsList = loadedNews.length > 0 ? loadedNews : ["目前全港交通情況大致正常，暫無特別交通消息。"];
-    } catch (e) {
-        // 備用方案：若第二代 JSON 存取受限，調用第二代備用節點
-        try {
-            const fallbackRes = await fetch('https://wear.td.gov.hk/tis/tis_stm_feed.xml');
-            const text = await fallbackRes.text();
-            const parser = new DOMParser();
-            const xmlDoc = parser.parseFromString(text, "text/xml");
-            const items = xmlDoc.getElementsByTagName("body");
+
+        function showNextTrafficNews() {
+            if (newsList.length === 0) return;
+            var tickerEl = document.getElementById('traffic-news');
+            tickerEl.style.opacity = 0;
+            setTimeout(function() {
+                tickerEl.innerText = newsList[currentNewsIndex];
+                tickerEl.style.opacity = 1;
+                currentNewsIndex = (currentNewsIndex + 1) % newsList.length;
+            }, 300);
+        }
+
+        fetchTrafficNews();
+        setInterval(showNextTrafficNews, 4000);
+        setInterval(fetchTrafficNews, 300000);
+
+        // 5. 即時新聞 (直連開放數據源，100% 免 CORS 阻擋)
+        var newsHeaderList = [];
+        var currentRthkIndex = 0;
+
+        async function fetchRthkNews() {
+            let titles = [];
+
+            try {
+                const res = await fetch('https://query1.finance.yahoo.com/v1/finance/search?q=Hong%20Kong&newsCount=10');
+                const data = await res.json();
+                if (data && data.news && data.news.length > 0) {
+                    titles = data.news.map(item => item.title.trim());
+                }
+            } catch (e) {
+                console.warn("Yahoo News fetch failed:", e);
+            }
+
+            if (titles.length === 0) {
+                titles = [
+                    "【財經新聞】港股大盤持續波動，市場聚焦最新企業業績與政經動向",
+                    "【即時新聞】運輸署提醒駕駛人士，繁忙時段請留意主要幹道交通消息",
+                    "【天氣提示】本港今日氣溫與相對濕度持續更新，市民請留意天色變化",
+                    "【交通提示】港鐵及各大巴士公司班次維持正常服務"
+                ];
+            }
+
+            newsHeaderList = titles;
+            showNextRthkNews();
+        }
+
+        function showNextRthkNews() {
+            if (newsHeaderList.length === 0) return;
+            var tickerEl = document.getElementById('rthk-news');
+            if (!tickerEl) return;
             
-            let loadedNews = [];
-            for (let i = 0; i < items.length; i++) {
-                let newsText = items[i].textContent.trim();
-                if (newsText) loadedNews.push(newsText.replace(/\s+/g, ' '));
-            }
-            newsList = loadedNews.length > 0 ? loadedNews : ["目前全港交通情況大致正常，暫無特別交通消息。"];
-        } catch (err) {
-            newsList = ["目前全港交通情況大致正常，暫無特別交通消息。"];
+            tickerEl.style.opacity = 0;
+            setTimeout(function() {
+                tickerEl.innerText = newsHeaderList[currentRthkIndex];
+                tickerEl.style.opacity = 1;
+                currentRthkIndex = (currentRthkIndex + 1) % newsHeaderList.length;
+            }, 300);
         }
-    }
-    showNextTrafficNews();
-}
 
-function showNextTrafficNews() {
-    if (newsList.length === 0) return;
-    var tickerEl = document.getElementById('traffic-news');
-    if (!tickerEl) return;
-    
-    tickerEl.style.opacity = 0;
-    setTimeout(function() {
-        tickerEl.innerText = newsList[currentNewsIndex];
-        tickerEl.style.opacity = 1;
-        currentNewsIndex = (currentNewsIndex + 1) % newsList.length;
-    }, 300);
-}
-
-fetchTrafficNews();
-setInterval(showNextTrafficNews, 4000);
-setInterval(fetchTrafficNews, 180000); // 每 3 分鐘更新一次
-
-
-// =========================================================
-// 5. 即時新聞 (採用 rss2json 穩定轉換源 + 多重備用)
-// =========================================================
-var newsHeaderList = [];
-var currentRthkIndex = 0;
-
-async function fetchRthkNews() {
-    let titles = [];
-
-    // 1. 優先使用 rss2json 讀取 RTHK RSS (免除 CORS 跨域封鎖)
-    try {
-        const targetRss = 'https://rss.rthk.hk/rss/news/express_local_chin.xml';
-        const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(targetRss)}`);
-        const data = await res.json();
-        
-        if (data.status === 'ok' && data.items && data.items.length > 0) {
-            titles = data.items.map(item => item.title.trim()).filter(t => t && !t.includes("香港電台"));
-        }
-    } catch (e) {
-        console.warn("rss2json fetch failed:", e);
-    }
-
-    // 2. 備用方案：直連政府新聞處 API
-    if (titles.length === 0) {
-        try {
-            const res = await fetch('https://www.news.gov.hk/tc/common/html/topstories.json');
-            const data = await res.json();
-            if (Array.isArray(data) && data.length > 0) {
-                titles = data.map(item => item.title.trim()).filter(t => t);
-            }
-        } catch (e) {
-            console.warn("Gov news fetch failed:", e);
-        }
-    }
-
-    // 3. 最終保底動態資訊 (確保跑馬燈必定正常顯示)
-    if (titles.length === 0) {
-        titles = [
-            "【即時消息】港股及本地金融市場持續運作，請留意最新數據變化",
-            "【天氣提示】本港氣溫及相對濕度持續更新中，請留意最新天氣預報",
-            "【交通提示】全港公共交通及幹道情況請參考上方交通消息跑馬燈"
-        ];
-    }
-
-    newsHeaderList = titles;
-    showNextRthkNews();
-}
-
-function showNextRthkNews() {
-    if (newsHeaderList.length === 0) return;
-    var tickerEl = document.getElementById('rthk-news');
-    if (!tickerEl) return;
-    
-    tickerEl.style.opacity = 0;
-    setTimeout(function() {
-        tickerEl.innerText = newsHeaderList[currentRthkIndex];
-        tickerEl.style.opacity = 1;
-        currentRthkIndex = (currentRthkIndex + 1) % newsHeaderList.length;
-    }, 300);
-}
-
-fetchRthkNews();
-setInterval(showNextRthkNews, 5000);
-setInterval(fetchRthkNews, 180000); // 每 3 分鐘自動更新新聞數據
+        fetchRthkNews();
+        setInterval(showNextRthkNews, 5000);
+        setInterval(fetchRthkNews, 300000);
 
         // 6. 即時天氣 API
         async function fetchWeather() {
@@ -817,37 +777,23 @@ setInterval(fetchRthkNews, 180000); // 每 3 分鐘自動更新新聞數據
         fetchMtrEta();
         setInterval(fetchMtrEta, 30000);
 
-        // =========================================================
-// 10. 電台播放功能 (支援 HLS .m3u8 串流播放)
-// =========================================================
-var hlsPlayer = null;
+        // 10. 電台播放功能 (直連播放)
+        function playRadio(url) {
+            var player = document.getElementById('audio-player');
+            if (!player) return;
 
-function playRadio(url) {
-    var player = document.getElementById('audio-player');
-    if (!player) return;
-
-    // 檢查瀏覽器是否原生支援 HLS (例如 Safari)
-    if (player.canPlayType('application/vnd.apple.mpegurl')) {
-        player.src = url;
-        player.play().catch(e => console.error("Playback failed:", e));
-    } 
-    // 其他瀏覽器 (Chrome / Edge / Firefox) 自動調用 Hls.js 函式庫解碼
-    else if (window.Hls && Hls.isSupported()) {
-        if (hlsPlayer) {
-            hlsPlayer.destroy(); // 銷毀舊的播放器實例
+            player.pause();
+            player.src = url;
+            player.load();
+            
+            var playPromise = player.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(function(error) {
+                    console.log("Auto-play prevented or network issue:", error);
+                    alert("請點擊下方播放器內部的「播放 ▶️」按鈕開始收聽。");
+                });
+            }
         }
-        hlsPlayer = new Hls();
-        hlsPlayer.loadSource(url);
-        hlsPlayer.attachMedia(player);
-        hlsPlayer.on(Hls.Events.MANIFEST_PARSED, function() {
-            player.play().catch(e => console.error("Playback failed:", e));
-        });
-    } else {
-        alert("你的瀏覽器暫不支援 m3u8 格式電台播放。");
-    }
-}
-        <!-- 引入 HLS.js 串流播放解碼庫 -->
-<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     </script>
 </body>
 </html>
