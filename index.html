@@ -7,7 +7,6 @@
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif; }
         
-        /* 專業深色背景 */
         body { 
             background-color: #0d1117; 
             color: #c9d1d9; 
@@ -19,7 +18,7 @@
             margin: 0 auto; 
         }
         
-        /* 頂部時鐘 Header */
+        /* 頂部時間 Header */
         .header { 
             background: #161b22; 
             border: 1px solid #30363d;
@@ -32,10 +31,42 @@
         .clock { font-size: 3.5rem; font-weight: 700; color: #58a6ff; font-variant-numeric: tabular-nums; letter-spacing: 1px; }
         .date { font-size: 1.1rem; color: #8b949e; font-weight: 500; margin-top: 4px; }
         
+        /* 特別交通消息 滾動跑馬燈 */
+        .traffic-ticker-container {
+            background: #161b22;
+            border: 1px solid #f43f5e;
+            border-left: 6px solid #f43f5e;
+            border-radius: 8px;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            overflow: hidden;
+            height: 48px;
+        }
+        .ticker-label {
+            background: #f43f5e;
+            color: #ffffff;
+            font-size: 0.8rem;
+            font-weight: 700;
+            padding: 4px 8px;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+        .ticker-content {
+            font-size: 0.95rem;
+            color: #f0f6fc;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: opacity 0.5s ease-in-out;
+            width: 100%;
+        }
+
         /* 網格佈局 */
         .main-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
         
-        /* 專業卡片樣式 */
+        /* 卡片通用樣式 */
         .card { 
             background: #161b22; 
             border: 1px solid #30363d;
@@ -54,11 +85,34 @@
             gap: 10px; 
         }
         
-        /* 天氣樣式 */
-        .temp-display { font-size: 3.8rem; font-weight: 700; color: #f2cc60; line-height: 1; margin: 10px 0; }
-        .weather-info { display: flex; gap: 20px; font-size: 0.95rem; color: #8b949e; margin-top: 15px; }
+        /* 天氣區域 */
+        .temp-display { font-size: 3.5rem; font-weight: 700; color: #f2cc60; line-height: 1; margin: 10px 0; }
+        .temp-range { font-size: 1.1rem; color: #f0f6fc; font-weight: 600; margin-bottom: 12px; }
+        .weather-info { display: flex; flex-wrap: wrap; gap: 15px; font-size: 0.9rem; color: #8b949e; }
         .weather-info strong { color: #f0f6fc; }
         
+        /* 9天天氣預報橫向滾動條 */
+        .forecast-container {
+            display: flex;
+            gap: 12px;
+            overflow-x: auto;
+            padding-bottom: 8px;
+        }
+        .forecast-card {
+            background: #0d1117;
+            border: 1px solid #21262d;
+            border-radius: 8px;
+            padding: 12px;
+            min-width: 105px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        .forecast-date { font-size: 0.85rem; color: #8b949e; margin-bottom: 4px; }
+        .forecast-week { font-size: 0.95rem; font-weight: 600; color: #f0f6fc; margin-bottom: 8px; }
+        .forecast-temp { font-size: 0.95rem; font-weight: 700; color: #f2cc60; margin-top: 6px; }
+        .forecast-rh { font-size: 0.75rem; color: #8b949e; margin-top: 4px; }
+        .forecast-psr { font-size: 0.75rem; color: #38bdf8; margin-top: 2px; }
+
         /* 交通到站 Box */
         .eta-box { 
             background: #0d1117; 
@@ -71,7 +125,7 @@
             justify-content: space-between;
             align-items: center;
         }
-        .mtr-box { border-left-color: #f43f5e; } /* 港鐵專用紅邊 */
+        .mtr-box { border-left-color: #f43f5e; }
         .route-name { font-size: 1rem; font-weight: 600; color: #f0f6fc; }
         .eta-time { font-size: 1.1rem; font-weight: 700; color: #4ade80; font-variant-numeric: tabular-nums; }
         
@@ -99,15 +153,13 @@
             transition: all 0.2s;
         }
         .btn:hover { background: #30363d; color: #f0f6fc; border-color: #8b949e; }
-        .btn-primary { background: #238636; color: #ffffff; border: none; }
-        .btn-primary:hover { background: #2ea043; }
         
-        audio { height: 32px; filter: invert(0.9); } /* 適應深色主題的播放器 */
+        audio { height: 32px; filter: invert(0.9); }
     </style>
 </head>
 <body>
 
-    <!-- 頂部時間區塊 -->
+    <!-- 1. 頂部時間區塊 -->
     <div class="header">
         <div>
             <div class="clock" id="clock">00:00:00</div>
@@ -116,31 +168,46 @@
         <button class="btn" onclick="location.reload()">↺ 系統更新</button>
     </div>
 
-    <!-- 多欄資訊區塊 -->
+    <!-- 2. 特別交通消息跑馬燈 (每 3 秒自動滾動) -->
+    <div class="traffic-ticker-container">
+        <span class="ticker-label">特別交通消息</span>
+        <div class="ticker-content" id="traffic-news">載入即時交通消息中...</div>
+    </div>
+
+    <!-- 3. 天氣與交通資訊區塊 -->
     <div class="main-grid">
-        <!-- 1. 天氣卡片 -->
+        <!-- 當日天氣卡片 -->
         <div class="card">
-            <div class="card-title">WEATHER METRICS</div>
+            <div class="card-title">CURRENT WEATHER</div>
             <div class="temp-display" id="temp">--°C</div>
+            <div class="temp-range" id="temp-range">今日氣溫: --°C - --°C</div>
             <div class="weather-info">
                 <span>相對濕度: <strong id="humidity">--%</strong></span>
             </div>
         </div>
 
-        <!-- 2. 巴士到站卡片 -->
+        <!-- 巴士到站卡片 (A33X) -->
         <div class="card">
             <div class="card-title">BUS DEPARTURES (A33X)</div>
             <div id="bus-eta-container">載入數據中...</div>
         </div>
 
-        <!-- 3. 港鐵班次卡片 -->
+        <!-- 港鐵班次卡片 (屯馬綫 - 屯門站) -->
         <div class="card">
             <div class="card-title">MTR SCHEDULE (屯門站)</div>
             <div id="mtr-eta-container">載入數據中...</div>
         </div>
     </div>
 
-    <!-- 底部電台播放器 -->
+    <!-- 4. 未來 9 天天氣預報區塊 -->
+    <div class="card">
+        <div class="card-title">9-DAY WEATHER FORECAST (未來9天天氣預報)</div>
+        <div class="forecast-container" id="forecast-container">
+            載入預報數據中...
+        </div>
+    </div>
+
+    <!-- 5. 底部電台播放器 -->
     <div class="radio-bar">
         <span style="font-weight:600; font-size:0.95rem; color:#8b949e;">LIVE BROADCAST</span>
         <div style="display:flex; gap:10px;">
@@ -168,8 +235,44 @@
         setInterval(updateClock, 1000);
         updateClock();
 
-        // 2. 天氣 API
+        // 2. 特別交通消息 API
+        var newsList = [];
+        var currentNewsIndex = 0;
+
+        async function fetchTrafficNews() {
+            try {
+                const res = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent('https://raw.githubusercontent.com/g0vhk-mrt/hk-traffic-news/main/news.json'));
+                const data = await res.json();
+                
+                if (data && data.length > 0) {
+                    newsList = data.map(item => item.title || item.description || item);
+                } else {
+                    newsList = ["目前全港交通情況大致正常，暫無特別交通消息。"];
+                }
+            } catch (e) {
+                newsList = ["交通消息 API 連結中... 目前交通情況大致正常。"];
+            }
+            showNextNews();
+        }
+
+        function showNextNews() {
+            if (newsList.length === 0) return;
+            var tickerEl = document.getElementById('traffic-news');
+            tickerEl.style.opacity = 0;
+            setTimeout(function() {
+                tickerEl.innerText = newsList[currentNewsIndex];
+                tickerEl.style.opacity = 1;
+                currentNewsIndex = (currentNewsIndex + 1) % newsList.length;
+            }, 300);
+        }
+
+        fetchTrafficNews();
+        setInterval(showNextNews, 3000);
+        setInterval(fetchTrafficNews, 300000);
+
+        // 3. 即時天氣 API (rhrread) + 9天預報 API (fnd)
         async function fetchWeather() {
+            // A. 即時溫度與濕度
             try {
                 const res = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=tc');
                 const data = await res.json();
@@ -180,18 +283,49 @@
                     document.getElementById('humidity').innerText = data.humidity.data[0].value + '%';
                 }
             } catch(e) { console.error(e); }
+
+            // B. 未來 9 天預報 + 當日最高/最低氣溫
+            try {
+                const resFnd = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=fnd&lang=tc');
+                const fndData = await resFnd.json();
+                
+                if (fndData.weatherForecast && fndData.weatherForecast.length > 0) {
+                    const todayForecast = fndData.weatherForecast[0];
+                    // 更新當日最高與最低氣溫
+                    document.getElementById('temp-range').innerText = `今日氣溫: ${todayForecast.forecastMint.value}°C - ${todayForecast.forecastMaxt.value}°C`;
+
+                    // 渲染 9 天天氣預報
+                    let forecastHtml = '';
+                    fndData.weatherForecast.forEach(day => {
+                        const dateStr = day.forecastDate.substring(4, 6) + '/' + day.forecastDate.substring(6, 8);
+                        const iconUrl = `https://www.hko.gov.hk/images/HKOWebIcon/pic${day.ForecastIcon}.png`;
+                        
+                        forecastHtml += `
+                            <div class="forecast-card">
+                                <div class="forecast-date">${dateStr}</div>
+                                <div class="forecast-week">${day.week}</div>
+                                <img src="${iconUrl}" width="38" height="38" alt="weather icon">
+                                <div class="forecast-temp">${day.forecastMint.value}° - ${day.forecastMaxt.value}°C</div>
+                                <div class="forecast-rh">${day.forecastMinrh.value}% - ${day.forecastMaxrh.value}%</div>
+                                <div class="forecast-psr">${day.PSR || ''}</div>
+                            </div>
+                        `;
+                    });
+                    document.getElementById('forecast-container').innerHTML = forecastHtml;
+                }
+            } catch(e) { 
+                console.error(e);
+                document.getElementById('forecast-container').innerText = '天氣預報數據加載失敗';
+            }
         }
         fetchWeather();
         setInterval(fetchWeather, 600000);
 
-        // 3. 龍運/九巴 API (A33X - 屯門站總站)
+        // 4. 九巴 / 龍運 API (A33X)
         async function fetchBusEta() {
-            // A33X 屬於龍運巴士 (LWB)，改為直接查詢路線所有到站時間，精準抓取「屯門站」
             try {
                 const res = await fetch('https://data.etabus.gov.hk/v1/transport/kmb/route-eta/A33X/1');
                 const data = await res.json();
-                
-                // 篩選屯門站 (Stop ID: B042C9CBA3DF74DA 或 站名包含屯門)
                 const etas = data.data.filter(item => item.seq === 1 || item.seq === 2).slice(0, 2);
                 
                 let html = '';
@@ -212,7 +346,7 @@
         fetchBusEta();
         setInterval(fetchBusEta, 30000);
 
-        // 4. 港鐵 API (屯馬綫 - 屯門站)
+        // 5. 港鐵 API (屯馬綫 - 屯門站)
         async function fetchMtrEta() {
             const line = 'TUM';
             const sta = 'TUM';
@@ -223,8 +357,6 @@
                 let html = '';
                 if (data.status === 1 && data.data && data.data[`${line}-${sta}`]) {
                     const stationData = data.data[`${line}-${sta}`];
-                    
-                    // 屯門站是屯馬綫起點/終點站，數據主要在 UP (往烏溪沙方向)
                     const trainList = stationData.UP || stationData.DOWN || [];
                     
                     if (trainList.length > 0) {
@@ -244,7 +376,7 @@
         fetchMtrEta();
         setInterval(fetchMtrEta, 30000);
 
-        // 5. 電台播放
+        // 6. 電台播放
         function playRadio(url) {
             var player = document.getElementById('audio-player');
             player.src = url;
