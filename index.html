@@ -103,7 +103,7 @@
             border: 1px solid #21262d;
             border-radius: 8px;
             padding: 12px;
-            min-width: 105px;
+            min-width: 110px;
             text-align: center;
             flex-shrink: 0;
         }
@@ -235,22 +235,39 @@
         setInterval(updateClock, 1000);
         updateClock();
 
-        // 2. 特別交通消息 API
+        // 2. 特別交通消息 API (直接讀取運輸署官方 XML)
         var newsList = [];
         var currentNewsIndex = 0;
 
         async function fetchTrafficNews() {
             try {
-                const res = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent('https://raw.githubusercontent.com/g0vhk-mrt/hk-traffic-news/main/news.json'));
-                const data = await res.json();
+                // 直接讀取運輸署官方繁體中文交通消息 XML Feed
+                const res = await fetch('https://wear.td.gov.hk/tis/tis_stm_feed.xml');
+                const text = await res.text();
                 
-                if (data && data.length > 0) {
-                    newsList = data.map(item => item.title || item.description || item);
+                // 解析 XML 內容
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(text, "text/xml");
+                const items = xmlDoc.getElementsByTagName("body");
+                
+                let loadedNews = [];
+                for (let i = 0; i < items.length; i++) {
+                    let newsText = items[i].textContent.trim();
+                    if (newsText) {
+                        // 清理過多的換行符
+                        newsText = newsText.replace(/\s+/g, ' ');
+                        loadedNews.push(newsText);
+                    }
+                }
+                
+                if (loadedNews.length > 0) {
+                    newsList = loadedNews;
                 } else {
                     newsList = ["目前全港交通情況大致正常，暫無特別交通消息。"];
                 }
             } catch (e) {
-                newsList = ["交通消息 API 連結中... 目前交通情況大致正常。"];
+                console.error("Traffic news fetch error:", e);
+                newsList = ["目前全港交通情況大致正常，暫無特別交通消息。"];
             }
             showNextNews();
         }
@@ -267,8 +284,8 @@
         }
 
         fetchTrafficNews();
-        setInterval(showNextNews, 3000);
-        setInterval(fetchTrafficNews, 300000);
+        setInterval(showNextNews, 3000); // 每 3 秒輪播下一條
+        setInterval(fetchTrafficNews, 300000); // 每 5 分鐘更新一次最新新聞
 
         // 3. 即時天氣 API (rhrread) + 9天預報 API (fnd)
         async function fetchWeather() {
@@ -276,37 +293,43 @@
             try {
                 const res = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=tc');
                 const data = await res.json();
-                if(data.temperature && data.temperature.data.length > 0) {
+                if(data.temperature && data.temperature.data && data.temperature.data.length > 0) {
                     document.getElementById('temp').innerText = data.temperature.data[0].value + '°C';
                 }
-                if(data.humidity && data.humidity.data.length > 0) {
+                if(data.humidity && data.humidity.data && data.humidity.data.length > 0) {
                     document.getElementById('humidity').innerText = data.humidity.data[0].value + '%';
                 }
-            } catch(e) { console.error(e); }
+            } catch(e) { console.error("rhrread error:", e); }
 
-            // B. 未來 9 天預報 + 當日最高/最低氣溫
+            // B. 未來 9 天預報
             try {
                 const resFnd = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=fnd&lang=tc');
                 const fndData = await resFnd.json();
                 
-                if (fndData.weatherForecast && fndData.weatherForecast.length > 0) {
-                    const todayForecast = fndData.weatherForecast[0];
-                    // 更新當日最高與最低氣溫
-                    document.getElementById('temp-range').innerText = `今日氣溫: ${todayForecast.forecastMint.value}°C - ${todayForecast.forecastMaxt.value}°C`;
+                if (fndData && fndData.weatherForecast && fndData.weatherForecast.length > 0) {
+                    const today = fndData.weatherForecast[0];
+                    const minT = today.forecastMintemp ? today.forecastMintemp.value : '--';
+                    const maxT = today.forecastMaxtemp ? today.forecastMaxtemp.value : '--';
+                    
+                    document.getElementById('temp-range').innerText = `今日氣溫: ${minT}°C - ${maxT}°C`;
 
-                    // 渲染 9 天天氣預報
                     let forecastHtml = '';
                     fndData.weatherForecast.forEach(day => {
-                        const dateStr = day.forecastDate.substring(4, 6) + '/' + day.forecastDate.substring(6, 8);
-                        const iconUrl = `https://www.hko.gov.hk/images/HKOWebIcon/pic${day.ForecastIcon}.png`;
-                        
+                        const dateStr = day.forecastDate ? (day.forecastDate.substring(4, 6) + '/' + day.forecastDate.substring(6, 8)) : '--';
+                        const iconNum = day.ForecastIcon || 50;
+                        const iconUrl = `https://www.hko.gov.hk/images/HKOWebIcon/pic${iconNum}.png`;
+                        const dMin = day.forecastMintemp ? day.forecastMintemp.value : '--';
+                        const dMax = day.forecastMaxtemp ? day.forecastMaxtemp.value : '--';
+                        const rhMin = day.forecastMinrh ? day.forecastMinrh.value : '--';
+                        const rhMax = day.forecastMaxrh ? day.forecastMaxrh.value : '--';
+
                         forecastHtml += `
                             <div class="forecast-card">
                                 <div class="forecast-date">${dateStr}</div>
-                                <div class="forecast-week">${day.week}</div>
+                                <div class="forecast-week">${day.week || ''}</div>
                                 <img src="${iconUrl}" width="38" height="38" alt="weather icon">
-                                <div class="forecast-temp">${day.forecastMint.value}° - ${day.forecastMaxt.value}°C</div>
-                                <div class="forecast-rh">${day.forecastMinrh.value}% - ${day.forecastMaxrh.value}%</div>
+                                <div class="forecast-temp">${dMin}° - ${dMax}°C</div>
+                                <div class="forecast-rh">${rhMin}% - ${rhMax}%</div>
                                 <div class="forecast-psr">${day.PSR || ''}</div>
                             </div>
                         `;
@@ -314,7 +337,7 @@
                     document.getElementById('forecast-container').innerHTML = forecastHtml;
                 }
             } catch(e) { 
-                console.error(e);
+                console.error("fnd error:", e);
                 document.getElementById('forecast-container').innerText = '天氣預報數據加載失敗';
             }
         }
@@ -346,30 +369,32 @@
         fetchBusEta();
         setInterval(fetchBusEta, 30000);
 
-        // 5. 港鐵 API (屯馬綫 - 屯門站)
+        // 5. 港鐵 API (屯馬綫 - 屯門站 TUM)
         async function fetchMtrEta() {
             const line = 'TUM';
             const sta = 'TUM';
             try {
-                const res = await fetch(`https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php?line=${line}&sta=${sta}`);
+                const res = await fetch(`https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php?line=${line}&sta=${sta}&lang=TC`);
                 const data = await res.json();
                 
                 let html = '';
                 if (data.status === 1 && data.data && data.data[`${line}-${sta}`]) {
                     const stationData = data.data[`${line}-${sta}`];
-                    const trainList = stationData.UP || stationData.DOWN || [];
+                    let trainList = stationData.UP || stationData.DOWN || [];
                     
-                    if (trainList.length > 0) {
+                    if (trainList && trainList.length > 0) {
                         trainList.slice(0, 2).forEach(train => {
                             const min = train.ttnt ? `${train.ttnt} 分鐘` : '即將開出';
-                            const dest = train.dest === 'WKS' ? '烏溪沙' : train.dest;
-                            html += `<div class="eta-box mtr-box"><span class="route-name">往 ${dest} (月台 ${train.plat})</span><span class="eta-time">${min}</span></div>`;
+                            let dest = train.dest === 'WKS' ? '烏溪沙' : (train.dest || '烏溪沙');
+                            const plat = train.plat || '1';
+                            html += `<div class="eta-box mtr-box"><span class="route-name">往 ${dest} (${plat}號月台)</span><span class="eta-time">${min}</span></div>`;
                         });
                     }
                 }
                 
-                document.getElementById('mtr-eta-container').innerHTML = html || '<div style="color:#8b949e">目前無班次數據</div>';
+                document.getElementById('mtr-eta-container').innerHTML = html || '<div style="color:#8b949e">目前無班次數據 (尾班車已過或暫無列車)</div>';
             } catch(e) {
+                console.error("MTR error:", e);
                 document.getElementById('mtr-eta-container').innerText = '數據加載失敗';
             }
         }
