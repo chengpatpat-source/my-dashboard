@@ -3,797 +3,241 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pro Executive Dashboard</title>
+    <title>即時新聞 Dashboard</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif; }
-        
-        body { 
-            background-color: #0d1117; 
-            color: #c9d1d9; 
-            padding: 24px; 
-            display: flex; 
-            flex-direction: column; 
-            gap: 20px; 
-            max-width: 1200px; 
-            margin: 0 auto; 
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f4f6f9;
+            color: #333;
+            margin: 0;
+            padding: 20px;
         }
-        
-        /* 1. 頂部時間 Header */
-        .header { 
-            background: #161b22; 
-            border: 1px solid #30363d;
-            padding: 24px 30px; 
-            border-radius: 12px; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-        }
-        .clock { font-size: 3.5rem; font-weight: 700; color: #58a6ff; font-variant-numeric: tabular-nums; letter-spacing: 1px; }
-        .date { font-size: 1.1rem; color: #8b949e; font-weight: 500; margin-top: 4px; }
-        
-        /* 2. 跑馬燈區塊 */
-        .ticker-card {
-            background: #161b22;
-            border: 1px solid #30363d;
+
+        .dashboard-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #ffffff;
             border-radius: 12px;
-            padding: 16px 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            padding: 24px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #eef2f5;
+            padding-bottom: 12px;
+            margin-bottom: 20px;
+        }
+
+        .header h2 {
+            margin: 0;
+            color: #1a252c;
+            font-size: 1.5rem;
+        }
+
+        .status-tag {
+            font-size: 0.85rem;
+            padding: 4px 10px;
+            border-radius: 20px;
+            background-color: #e3f2fd;
+            color: #1976d2;
+            font-weight: 500;
+        }
+
+        .news-list {
             display: flex;
             flex-direction: column;
             gap: 12px;
         }
-        .ticker-row {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            overflow: hidden;
-            height: 32px;
-        }
-        .ticker-label {
-            font-size: 0.8rem;
-            font-weight: 700;
-            padding: 4px 10px;
-            border-radius: 4px;
-            white-space: nowrap;
-        }
-        .traffic-label { background: #f43f5e; color: #ffffff; }
-        .news-label { background: #22c55e; color: #ffffff; }
-        
-        .ticker-content {
-            font-size: 0.95rem;
-            color: #f0f6fc;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            transition: opacity 0.5s ease-in-out;
-            width: 100%;
+
+        .news-item {
+            padding: 12px 16px;
+            border-left: 4px solid #007bff;
+            background-color: #f8f9fa;
+            border-radius: 0 8px 8px 0;
+            margin: 0;
+            font-size: 1rem;
+            line-height: 1.5;
+            transition: transform 0.2s, background-color 0.2s;
         }
 
-        /* 3. 網格佈局 */
-        .main-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
-        
-        /* 卡片通用樣式 */
-        .card { 
-            background: #161b22; 
-            border: 1px solid #30363d;
-            padding: 24px; 
-            border-radius: 12px; 
+        .news-item:hover {
+            background-color: #eef5ff;
+            transform: translateX(2px);
         }
-        .card-title { 
-            font-size: 1rem; 
-            font-weight: 600; 
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 16px; 
-            color: #8b949e; 
-            display: flex; 
-            align-items: center; 
-            gap: 10px; 
+
+        .news-item.weather {
+            border-left-color: #ff9800;
         }
-        .sub-section-title {
-            font-size: 0.85rem;
-            font-weight: 700;
-            color: #58a6ff;
-            margin-top: 12px;
-            margin-bottom: 8px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+
+        .news-item.gov {
+            border-left-color: #28a745;
         }
-        
-        /* 當前天氣樣式 */
-        .weather-desc-box {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin: 10px 0;
-        }
-        .temp-display { font-size: 3.5rem; font-weight: 700; color: #f2cc60; line-height: 1; }
-        .weather-status-text { 
-            font-size: 1.1rem; 
-            font-weight: 600; 
-            color: #38bdf8; 
-            background: #0d1117; 
-            padding: 6px 12px; 
-            border-radius: 6px; 
-            border: 1px solid #21262d; 
-        }
-        .temp-range { font-size: 1.05rem; color: #f0f6fc; font-weight: 600; margin-bottom: 12px; }
-        .weather-info { display: flex; flex-wrap: wrap; gap: 15px; font-size: 0.9rem; color: #8b949e; }
-        .weather-info strong { color: #f0f6fc; }
-        
-        /* 9天天氣預報橫向滾動條 */
-        .forecast-container {
-            display: flex;
-            gap: 12px;
-            overflow-x: auto;
-            padding-bottom: 8px;
-        }
-        .forecast-card {
-            background: #0d1117;
-            border: 1px solid #21262d;
-            border-radius: 8px;
-            padding: 12px;
-            min-width: 110px;
+
+        .loading {
             text-align: center;
-            flex-shrink: 0;
+            color: #6c757d;
+            padding: 20px;
+            font-style: italic;
         }
-        .forecast-date { font-size: 0.85rem; color: #8b949e; margin-bottom: 4px; }
-        .forecast-week { font-size: 0.95rem; font-weight: 600; color: #f0f6fc; margin-bottom: 8px; }
-        .forecast-icon-emoji { font-size: 2.2rem; line-height: 1.2; margin: 6px 0; display: block; }
-        .forecast-temp { font-size: 0.95rem; font-weight: 700; color: #f2cc60; margin-top: 6px; }
-        .forecast-rh { font-size: 0.75rem; color: #8b949e; margin-top: 4px; }
-        .forecast-psr { font-size: 0.75rem; color: #38bdf8; margin-top: 2px; }
-
-        /* 交通 / 股票 Box */
-        .eta-box, .stock-box { 
-            background: #0d1117; 
-            border: 1px solid #21262d;
-            border-left: 4px solid #38bdf8; 
-            border-radius: 8px; 
-            padding: 12px 14px; 
-            margin-bottom: 8px; 
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .mtr-box { border-left-color: #f43f5e; }
-        .stock-up { border-left-color: #22c55e; }
-        .stock-down { border-left-color: #f43f5e; }
-        
-        .route-info, .stock-info { display: flex; flex-direction: column; gap: 2px; }
-        .route-name, .stock-name { font-size: 0.95rem; font-weight: 600; color: #f0f6fc; }
-        .stop-name, .stock-symbol { font-size: 0.75rem; color: #8b949e; font-weight: 500; }
-        
-        .eta-time { font-size: 1.05rem; font-weight: 700; color: #4ade80; font-variant-numeric: tabular-nums; }
-        .stock-price { font-size: 1.1rem; font-weight: 700; text-align: right; }
-        .price-up { color: #4ade80; }
-        .price-down { color: #f43f5e; }
-        
-        /* 按鈕與電台 Bar */
-        .radio-bar { 
-            background: #161b22; 
-            border: 1px solid #30363d;
-            padding: 18px 24px; 
-            border-radius: 12px; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            flex-wrap: wrap; 
-            gap: 15px; 
-        }
-        .btn { 
-            background: #21262d; 
-            color: #c9d1d9; 
-            border: 1px solid #363b42; 
-            padding: 8px 16px; 
-            border-radius: 6px; 
-            font-size: 0.9rem;
-            font-weight: 500; 
-            cursor: pointer; 
-            transition: all 0.2s;
-        }
-        .btn:hover { background: #30363d; color: #f0f6fc; border-color: #8b949e; }
-        
-        audio { height: 32px; filter: invert(0.9); }
     </style>
 </head>
 <body>
 
-    <!-- 1. 頂部時間區塊 -->
-    <div class="header">
-        <div>
-            <div class="clock" id="clock">00:00:00</div>
-            <div class="date" id="date">----年--月--日</div>
-        </div>
-        <button class="btn" onclick="location.reload(true)">↺ 強制刷新</button>
-    </div>
-
-    <!-- 2. 特別交通消息 & 即時新聞雙跑馬燈 -->
-    <div class="ticker-card">
-        <div class="ticker-row">
-            <span class="ticker-label traffic-label">交通消息</span>
-            <div class="ticker-content" id="traffic-news">載入即時交通消息中...</div>
-        </div>
-        <div class="ticker-row">
-            <span class="ticker-label news-label">即時新聞</span>
-            <div class="ticker-content" id="rthk-news">載入最新新聞中...</div>
-        </div>
-    </div>
-
-    <!-- 3. 網格佈局 (天氣 / 交通 / 股票) -->
-    <div class="main-grid">
-        
-        <!-- 當日天氣卡片 -->
-        <div class="card">
-            <div class="card-title">CURRENT WEATHER</div>
-            <div class="weather-desc-box">
-                <div class="temp-display" id="temp">--°C</div>
-                <div class="weather-status-text" id="weather-desc">載入中...</div>
-            </div>
-            <div class="temp-range" id="temp-range">今日氣溫: --°C - --°C</div>
-            <div class="weather-info">
-                <span>相對濕度: <strong id="humidity">--%</strong></span>
-            </div>
+    <div class="dashboard-container">
+        <div class="header">
+            <h2>📰 即時新聞與資訊</h2>
+            <span id="update-status" class="status-tag">更新中...</span>
         </div>
 
-        <!-- 即時股票及財經資訊卡片 -->
-        <div class="card">
-            <div class="card-title">STOCK MARKET (即時股票)</div>
-            
-            <!-- 股票動態搜尋列 -->
-            <div style="display: flex; gap: 8px; margin-bottom: 16px;">
-                <input type="text" id="custom-stock-input" placeholder="輸入號碼 (例: 6616, 700, NVDA)" 
-                       style="flex: 1; padding: 8px 12px; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; color: #f0f6fc; font-size: 0.9rem; outline: none;"
-                       onkeypress="if(event.key === 'Enter') fetchStockPrice()">
-                <button class="btn" onclick="fetchStockPrice()" style="padding: 8px 12px; background: #238636; border-color: #2ea043; color: white;">查詢</button>
-            </div>
-
-            <!-- 動態搜尋結果顯示區 -->
-            <div id="search-stock-container"></div>
-
-            <hr style="border: 0; border-top: 1px solid #21262d; margin: 12px 0;">
-
-            <!-- 預設常用監控股票 -->
-            <div class="sub-section-title">焦點港股與指數</div>
-            <div id="default-stocks-container">載入股票數據中...</div>
+        <!-- 新聞內容顯示區域 -->
+        <div id="news-container" class="news-list">
+            <p class="loading">正在獲取最新即時新聞及天氣資訊...</p>
         </div>
-
-        <!-- 巴士到站卡片 -->
-        <div class="card">
-            <div class="card-title">BUS DEPARTURES</div>
-            
-            <!-- 動態搜尋列 -->
-            <div style="display: flex; gap: 8px; margin-bottom: 16px;">
-                <input type="text" id="custom-bus-input" placeholder="輸入路線 (例: 258D, 960)" 
-                       style="flex: 1; padding: 8px 12px; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; color: #f0f6fc; font-size: 0.9rem; outline: none;"
-                       onkeypress="if(event.key === 'Enter') fetchCustomBusEta()">
-                <button class="btn" onclick="fetchCustomBusEta()" style="padding: 8px 12px; background: #238636; border-color: #2ea043; color: white;">搜尋</button>
-            </div>
-
-            <!-- 動態搜尋結果顯示區 -->
-            <div id="custom-bus-container"></div>
-
-            <hr style="border: 0; border-top: 1px solid #21262d; margin: 12px 0;">
-
-            <!-- 預設常用路線 -->
-            <div class="sub-section-title">A33X 路線</div>
-            <div id="bus-a33x-container">載入數據中...</div>
-
-            <div class="sub-section-title" style="margin-top: 12px;">E37 路線</div>
-            <div id="bus-e37-container">載入數據中...</div>
-        </div>
-
-    </div>
-
-    <!-- 4. 港鐵班次卡片 & 未來 9 天天氣預報區塊 -->
-    <div class="main-grid">
-        <div class="card">
-            <div class="card-title">MTR SCHEDULE (屯門站)</div>
-            <div class="sub-section-title">由屯門站出發 (往烏溪沙方向)</div>
-            <div id="mtr-departures-container">載入數據中...</div>
-        </div>
-
-        <div class="card" style="grid-column: span 2;">
-            <div class="card-title">9-DAY WEATHER FORECAST (未來9天天氣預報)</div>
-            <div class="forecast-container" id="forecast-container">
-                載入預報數據中...
-            </div>
-        </div>
-    </div>
-
-    <!-- 5. 底部電台播放器 (修改 onclick 網址處) -->
-    <div class="radio-bar">
-        <span style="font-weight:600; font-size:0.95rem; color:#8b949e;">LIVE BROADCAST</span>
-        <div style="display:flex; gap:10px;">
-            <button class="btn" onclick="playRadio('https://stream.zeno.fm/f3wvbbqmdg8uv')">廣播電台 1</button>
-            <button class="btn" onclick="playRadio('https://stream.zeno.fm/0r23447334duv')">廣播電台 2</button>
-        </div>
-        <audio id="audio-player" controls></audio>
     </div>
 
     <script>
-        // 1. 時鐘功能
-        function updateClock() {
-            var now = new Date();
-            var h = String(now.getHours()).padStart(2, '0');
-            var m = String(now.getMinutes()).padStart(2, '0');
-            var s = String(now.getSeconds()).padStart(2, '0');
-            document.getElementById('clock').innerText = h + ':' + m + ':' + s;
-            
-            var year = now.getFullYear();
-            var month = String(now.getMonth() + 1).padStart(2, '0');
-            var date = String(now.getDate()).padStart(2, '0');
-            var days = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
-            document.getElementById('date').innerText = year + ' 年 ' + month + ' 月 ' + date + ' 日 ' + days[now.getDay()];
-        }
-        setInterval(updateClock, 1000);
-        updateClock();
+        // ==========================================
+        // 即時新聞與天氣 Fetch 模組
+        // ==========================================
 
-        // 2. 股票 API 查詢 (支援 5 位數港股如 6616 -> 06616.HK 與美股)
-        function formatStockSymbol(input) {
-            let symbol = input.trim().toUpperCase();
-            if (/^\d{1,5}$/.test(symbol)) {
-                symbol = symbol.padStart(5, '0') + '.HK';
-            }
-            return symbol;
-        }
-
-        async function getStockQuote(symbol) {
-            const proxyList = [
-                `https://corsproxy.io/?${encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/' + symbol + '?interval=1m&range=1d')}`,
-                `https://api.allorigins.win/get?url=${encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/' + symbol + '?interval=1m&range=1d')}`
-            ];
-
-            for (let url of proxyList) {
-                try {
-                    const controller = new AbortController();
-                    const id = setTimeout(() => controller.abort(), 6000);
-                    const res = await fetch(url, { signal: controller.signal });
-                    clearTimeout(id);
-
-                    let parsed = null;
-                    if (url.includes('allorigins')) {
-                        const data = await res.json();
-                        if (data.contents) parsed = JSON.parse(data.contents);
-                    } else {
-                        parsed = await res.json();
-                    }
-
-                    if (parsed && parsed.chart && parsed.chart.result && parsed.chart.result.length > 0) {
-                        const meta = parsed.chart.result[0].meta;
-                        const price = meta.regularMarketPrice;
-                        const prevClose = meta.chartPreviousClose || meta.previousClose;
-                        const diff = price - prevClose;
-                        const percent = (diff / prevClose) * 100;
-                        
-                        return {
-                            symbol: meta.symbol,
-                            name: meta.shortName || meta.longName || meta.symbol,
-                            price: price.toFixed(2),
-                            diff: (diff >= 0 ? '+' : '') + diff.toFixed(2),
-                            percent: (diff >= 0 ? '+' : '') + percent.toFixed(2) + '%',
-                            isUp: diff >= 0
-                        };
-                    }
-                } catch (e) {
-                    console.warn(`Attempt failed for stock ${symbol} via ${url}:`, e);
-                }
-            }
-            return null;
-        }
-
-        async function fetchStockPrice() {
-            const inputEl = document.getElementById('custom-stock-input');
-            const containerEl = document.getElementById('search-stock-container');
-            const rawInput = inputEl.value;
-
-            if (!rawInput) {
-                containerEl.innerHTML = '<div style="color:#8b949e; font-size:0.85rem;">請輸入股票號碼</div>';
-                return;
-            }
-
-            containerEl.innerHTML = '<div style="color:#58a6ff; font-size:0.85rem;">查詢最新股價中...</div>';
-            const symbol = formatStockSymbol(rawInput);
-            const stock = await getStockQuote(symbol);
-
-            if (stock) {
-                const colorClass = stock.isUp ? 'price-up' : 'price-down';
-                const boxClass = stock.isUp ? 'stock-up' : 'stock-down';
-                containerEl.innerHTML = `
-                    <div class="stock-box ${boxClass}">
-                        <div class="stock-info">
-                            <span class="stock-name">${stock.name}</span>
-                            <span class="stock-symbol">${stock.symbol}</span>
-                        </div>
-                        <div class="stock-price ${colorClass}">
-                            $${stock.price}
-                            <div style="font-size:0.75rem;">${stock.diff} (${stock.percent})</div>
-                        </div>
-                    </div>`;
-            } else {
-                containerEl.innerHTML = `<div style="color:#f43f5e; font-size:0.85rem;">未能找到股票 ${rawInput} (${symbol}) 的數據，請檢查號碼。</div>`;
-            }
-        }
-
-        // 預設監控股票列表
-        async function fetchDefaultStocks() {
-            const defaultSymbols = ['^HSI', '6616.HK', '0700.HK', '9988.HK', '0005.HK'];
-            const containerEl = document.getElementById('default-stocks-container');
-            let html = '';
-
-            for (let sym of defaultSymbols) {
-                const stock = await getStockQuote(sym);
-                if (stock) {
-                    const colorClass = stock.isUp ? 'price-up' : 'price-down';
-                    const boxClass = stock.isUp ? 'stock-up' : 'stock-down';
-                    let displayName = stock.symbol === '^HSI' ? '恒生指數' : stock.name;
-                    
-                    html += `
-                        <div class="stock-box ${boxClass}">
-                            <div class="stock-info">
-                                <span class="stock-name">${displayName}</span>
-                                <span class="stock-symbol">${stock.symbol}</span>
-                            </div>
-                            <div class="stock-price ${colorClass}">
-                                $${stock.price}
-                                <div style="font-size:0.75rem;">${stock.diff} (${stock.percent})</div>
-                            </div>
-                        </div>`;
-                }
-            }
-            containerEl.innerHTML = html || '<div style="color:#8b949e">股票數據加載失敗</div>';
-        }
-        fetchDefaultStocks();
-        setInterval(fetchDefaultStocks, 60000);
-
-        // 3. 天氣圖示對照
-        const weatherIconMap = {
-            50: { emoji: '☀️', text: '陽光充沛' },
-            51: { emoji: '☀️', text: '大致天晴' },
-            52: { emoji: '⛅', text: '短暫陽光' },
-            53: { emoji: '🌤️', text: '間中有陽光' },
-            54: { emoji: '🌤️', text: '間中有陽光及有幾陣驟雨' },
-            60: { emoji: '☁️', text: '多雲' },
-            61: { emoji: '☁️', text: '密雲' },
-            62: { emoji: '🌧️', text: '微雨' },
-            63: { emoji: '🌧️', text: '有雨' },
-            64: { emoji: '🌧️', text: '大雨' },
-            65: { emoji: '⛈️', text: '雷暴' },
-            80: { emoji: '🌬️', text: '大風' },
-            81: { emoji: '🌫️', text: '乾燥' },
-            82: { emoji: '💧', text: '潮濕' },
-            83: { emoji: '🌫️', text: '霧' },
-            84: { emoji: '🌫️', text: '薄霧' },
-            85: { emoji: '🌫️', text: '煙霞' },
-            90: { emoji: '🌙', text: '天晴 (晚間)' },
-            91: { emoji: '🌕', text: '大致天晴 (晚間)' },
-            92: { emoji: '☁️', text: '多雲 (晚間)' },
-            93: { emoji: '🌧️', text: '有雨 (晚間)' }
-        };
-
-        function getWeatherEmoji(iconCode) {
-            const code = parseInt(iconCode, 10);
-            return (weatherIconMap[code] && weatherIconMap[code].emoji) ? weatherIconMap[code].emoji : '🌤️';
-        }
-
-        function getWeatherTextByIcon(iconCode) {
-            const code = parseInt(iconCode, 10);
-            return (weatherIconMap[code] && weatherIconMap[code].text) ? weatherIconMap[code].text : '大致多雲';
-        }
-
-        // 4. 特別交通消息 API
-        var newsList = [];
-        var currentNewsIndex = 0;
-
-        async function fetchTrafficNews() {
-            try {
-                const res = await fetch('https://wear.td.gov.hk/tis/tis_stm_feed.xml');
-                const text = await res.text();
-                
-                const parser = new DOMParser();
-                const xmlDoc = parser.parseFromString(text, "text/xml");
-                const items = xmlDoc.getElementsByTagName("body");
-                
-                let loadedNews = [];
-                for (let i = 0; i < items.length; i++) {
-                    let newsText = items[i].textContent.trim();
-                    if (newsText) {
-                        newsText = newsText.replace(/\s+/g, ' ');
-                        loadedNews.push(newsText);
-                    }
-                }
-                newsList = loadedNews.length > 0 ? loadedNews : ["目前全港交通情況大致正常，暫無特別交通消息。"];
-            } catch (e) {
-                newsList = ["目前全港交通情況大致正常，暫無特別交通消息。"];
-            }
-            showNextTrafficNews();
-        }
-
-        function showNextTrafficNews() {
-            if (newsList.length === 0) return;
-            var tickerEl = document.getElementById('traffic-news');
-            tickerEl.style.opacity = 0;
-            setTimeout(function() {
-                tickerEl.innerText = newsList[currentNewsIndex];
-                tickerEl.style.opacity = 1;
-                currentNewsIndex = (currentNewsIndex + 1) % newsList.length;
-            }, 300);
-        }
-
-        fetchTrafficNews();
-        setInterval(showNextTrafficNews, 4000);
-        setInterval(fetchTrafficNews, 300000);
-
-        // 5. 即時新聞 (直連開放數據源，100% 免 CORS 阻擋)
-        var newsHeaderList = [];
-        var currentRthkIndex = 0;
-
+        // 1. 抓取 RTHK 即時新聞 (使用 AllOrigins Proxy + DOMParser)
         async function fetchRthkNews() {
-            let titles = [];
+            const rssUrl = 'https://rss.rthk.hk/rss/news/express_local_chin.xml';
+            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(rssUrl)}`;
 
             try {
-                const res = await fetch('https://query1.finance.yahoo.com/v1/finance/search?q=Hong%20Kong&newsCount=10');
-                const data = await res.json();
-                if (data && data.news && data.news.length > 0) {
-                    titles = data.news.map(item => item.title.trim());
-                }
-            } catch (e) {
-                console.warn("Yahoo News fetch failed:", e);
-            }
+                const response = await fetch(proxyUrl);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const data = await response.json();
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(data.contents, "text/xml");
+                const items = xmlDoc.querySelectorAll("item");
 
-            if (titles.length === 0) {
-                titles = [
-                    "【財經新聞】港股大盤持續波動，市場聚焦最新企業業績與政經動向",
-                    "【即時新聞】運輸署提醒駕駛人士，繁忙時段請留意主要幹道交通消息",
-                    "【天氣提示】本港今日氣溫與相對濕度持續更新，市民請留意天色變化",
-                    "【交通提示】港鐵及各大巴士公司班次維持正常服務"
+                const newsList = [];
+                items.forEach((item, index) => {
+                    if (index < 8) { // 擷取前 8 條最新新聞
+                        const title = item.querySelector("title")?.textContent || "";
+                        if (title) newsList.push({ type: 'rthk', text: `【即時新聞】${title}` });
+                    }
+                });
+
+                return newsList.length > 0 ? newsList : null;
+            } catch (error) {
+                console.error("RTHK 新聞抓取失敗:", error);
+                return null;
+            }
+        }
+
+        // 2. 抓取政府新聞網 (使用 CorsProxy 解決 CORS)
+        async function fetchGovNews() {
+            const targetUrl = 'https://www.news.gov.hk/tc/common/html/topstories.json';
+            const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
+
+            try {
+                const response = await fetch(proxyUrl);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const data = await response.json();
+                const newsList = [];
+
+                if (Array.isArray(data)) {
+                    data.slice(0, 4).forEach(item => {
+                        if (item.title) {
+                            newsList.push({ type: 'gov', text: `【政府新聞】${item.title}` });
+                        }
+                    });
+                }
+                return newsList.length > 0 ? newsList : null;
+            } catch (error) {
+                console.error("Gov新聞抓取失敗:", error);
+                return null;
+            }
+        }
+
+        // 3. 抓取香港天文台最新天氣
+        async function fetchWeather() {
+            const weatherUrl = 'https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=tc';
+
+            try {
+                const response = await fetch(weatherUrl);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const data = await response.json();
+                const temp = data.temperature?.data[0]?.value || '--';
+                const humidity = data.humidity?.data[0]?.value || '--';
+                const warningMsg = (data.warningMessage && data.warningMessage.length > 0) 
+                    ? ` ｜ 警告：${data.warningMessage.join(" ")}` 
+                    : "";
+
+                return [{ 
+                    type: 'weather', 
+                    text: `【天氣提示】本港現時氣溫 ${temp}°C，相對濕度 ${humidity}%${warningMsg}` 
+                }];
+            } catch (error) {
+                console.error("天氣數據抓取失敗:", error);
+                return null;
+            }
+        }
+
+        // ==========================================
+        // 主程序：彙整數據並繪製 UI
+        // ==========================================
+        async function loadDashboardData() {
+            const statusTag = document.getElementById('update-status');
+            const container = document.getElementById('news-container');
+            
+            if (statusTag) statusTag.innerText = "更新中...";
+
+            // 平行發送網絡請求
+            const [rthkNews, govNews, weatherInfo] = await Promise.all([
+                fetchRthkNews(),
+                fetchGovNews(),
+                fetchWeather()
+            ]);
+
+            let allNews = [];
+
+            if (weatherInfo) allNews.push(...weatherInfo);
+            if (rthkNews) allNews.push(...rthkNews);
+            if (govNews) allNews.push(...govNews);
+
+            // 如果全部請求失敗，啟用 Fallback 備用資料
+            if (allNews.length === 0) {
+                console.warn("API 獲取失敗，切換至備用文字");
+                allNews = [
+                    { type: 'gov', text: "【財經新聞】港股大盤持續波動，市場聚焦最新企業業績與政經動向" },
+                    { type: 'rthk', text: "【即時新聞】運輸署提醒駕駛人士，繁忙時段請留意主要幹道交通消息" },
+                    { type: 'weather', text: "【天氣提示】本港氣溫與相對濕度持續更新，市民請留意天色變化" },
+                    { type: 'rthk', text: "【交通提示】港鐵及各大巴士公司班次維持正常服務" }
                 ];
             }
 
-            newsHeaderList = titles;
-            showNextRthkNews();
+            // 渲染列表到畫面上
+            container.innerHTML = allNews.map(item => {
+                let extraClass = '';
+                if (item.type === 'weather') extraClass = 'weather';
+                if (item.type === 'gov') extraClass = 'gov';
+                
+                return `<p class="news-item ${extraClass}">${item.text}</p>`;
+            }).join('');
+
+            // 更新最後刷新的時間
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('zh-HK', { hour: '2-digit', minute: '2-digit' });
+            if (statusTag) statusTag.innerText = `最後更新於 ${timeString}`;
         }
 
-        function showNextRthkNews() {
-            if (newsHeaderList.length === 0) return;
-            var tickerEl = document.getElementById('rthk-news');
-            if (!tickerEl) return;
+        // 頁面載入完成後自動執行
+        document.addEventListener('DOMContentLoaded', () => {
+            loadDashboardData();
             
-            tickerEl.style.opacity = 0;
-            setTimeout(function() {
-                tickerEl.innerText = newsHeaderList[currentRthkIndex];
-                tickerEl.style.opacity = 1;
-                currentRthkIndex = (currentRthkIndex + 1) % newsHeaderList.length;
-            }, 300);
-        }
-
-        fetchRthkNews();
-        setInterval(showNextRthkNews, 5000);
-        setInterval(fetchRthkNews, 300000);
-
-        // 6. 即時天氣 API
-        async function fetchWeather() {
-            try {
-                const res = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=tc');
-                const data = await res.json();
-                
-                if(data.temperature && data.temperature.data && data.temperature.data.length > 0) {
-                    document.getElementById('temp').innerText = data.temperature.data[0].value + '°C';
-                }
-                if(data.humidity && data.humidity.data && data.humidity.data.length > 0) {
-                    document.getElementById('humidity').innerText = data.humidity.data[0].value + '%';
-                }
-                
-                let statusText = "";
-                if(data.weatherOverview && data.weatherOverview.trim() !== "") {
-                    statusText = data.weatherOverview.trim();
-                } else if(data.icon && data.icon.length > 0) {
-                    statusText = getWeatherTextByIcon(data.icon[0]);
-                } else {
-                    statusText = "大致多雲";
-                }
-                document.getElementById('weather-desc').innerText = statusText;
-
-            } catch(e) { console.error("rhrread error:", e); }
-
-            // 9 天天氣預報
-            try {
-                const resFnd = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=fnd&lang=tc');
-                const fndData = await resFnd.json();
-                
-                if (fndData && fndData.weatherForecast && fndData.weatherForecast.length > 0) {
-                    const today = fndData.weatherForecast[0];
-                    const minT = today.forecastMintemp ? today.forecastMintemp.value : '--';
-                    const maxT = today.forecastMaxtemp ? today.forecastMaxtemp.value : '--';
-                    
-                    document.getElementById('temp-range').innerText = `今日氣溫: ${minT}°C - ${maxT}°C`;
-
-                    let forecastHtml = '';
-                    fndData.weatherForecast.forEach(day => {
-                        const dateStr = day.forecastDate ? (day.forecastDate.substring(4, 6) + '/' + day.forecastDate.substring(6, 8)) : '--';
-                        let emoji = getWeatherEmoji(day.ForecastIcon || 50);
-
-                        const dMin = day.forecastMintemp ? day.forecastMintemp.value : '--';
-                        const dMax = day.forecastMaxtemp ? day.forecastMaxtemp.value : '--';
-                        const rhMin = day.forecastMinrh ? day.forecastMinrh.value : '--';
-                        const rhMax = day.forecastMaxrh ? day.forecastMaxrh.value : '--';
-
-                        forecastHtml += `
-                            <div class="forecast-card">
-                                <div class="forecast-date">${dateStr}</div>
-                                <div class="forecast-week">${day.week || ''}</div>
-                                <div class="forecast-icon-emoji">${emoji}</div>
-                                <div class="forecast-temp">${dMin}° - ${dMax}°C</div>
-                                <div class="forecast-rh">${rhMin}% - ${rhMax}%</div>
-                                <div class="forecast-psr">${day.PSR || ''}</div>
-                            </div>
-                        `;
-                    });
-                    document.getElementById('forecast-container').innerHTML = forecastHtml;
-                }
-            } catch(e) { 
-                console.error("fnd error:", e);
-                document.getElementById('forecast-container').innerText = '天氣預報數據加載失敗';
-            }
-        }
-        fetchWeather();
-        setInterval(fetchWeather, 600000);
-
-        // 7. 動態搜尋自訂巴士路線
-        async function fetchCustomBusEta() {
-            const inputEl = document.getElementById('custom-bus-input');
-            const containerEl = document.getElementById('custom-bus-container');
-            const route = inputEl.value.trim().toUpperCase();
-
-            if (!route) {
-                containerEl.innerHTML = '<div style="color:#8b949e; font-size:0.85rem;">請輸入路線號碼</div>';
-                return;
-            }
-
-            containerEl.innerHTML = '<div style="color:#58a6ff; font-size:0.85rem;">搜尋中...</div>';
-
-            try {
-                const res = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/route-eta/${route}/1`);
-                const data = await res.json();
-                
-                const etas = data.data ? data.data.filter(item => item.eta).slice(0, 3) : [];
-                
-                if (etas.length === 0) {
-                    containerEl.innerHTML = `<div style="color:#f43f5e; font-size:0.85rem;">未有找到路線 ${route} 的即時班次</div>`;
-                    return;
-                }
-
-                let html = `<div class="sub-section-title" style="color:#38bdf8;">搜尋結果：${route} 號線</div>`;
-                etas.forEach(eta => {
-                    const etaTime = eta.eta ? new Date(eta.eta).toTimeString().substring(0, 5) : '未知';
-                    const rmk = eta.rmk_tc ? ` (${eta.rmk_tc})` : '';
-                    const dest = eta.dest_tc || '未知目的地';
-                    
-                    html += `
-                        <div class="eta-box" style="border-left-color: #22c55e;">
-                            <div class="route-info">
-                                <span class="route-name">往 ${dest}${rmk}</span>
-                                <span class="stop-name">📍 ${eta.seq ? '第 ' + eta.seq + ' 站' : '即時班次'}</span>
-                            </div>
-                            <span class="eta-time">${etaTime}</span>
-                        </div>`;
-                });
-                
-                containerEl.innerHTML = html;
-            } catch (e) {
-                console.error("Custom Bus ETA error:", e);
-                containerEl.innerHTML = '<div style="color:#f43f5e; font-size:0.85rem;">查詢失敗，請檢查路線號碼是否正確</div>';
-            }
-        }
-
-        // 8. 九巴預設路線
-        async function fetchBusEta() {
-            try {
-                const res = await fetch('https://data.etabus.gov.hk/v1/transport/kmb/route-eta/A33X/1');
-                const data = await res.json();
-                const etas = data.data.filter(item => item.seq === 1 || item.seq === 2).slice(0, 2);
-                
-                let html = '';
-                if(!etas || etas.length === 0 || !etas[0].eta) { 
-                    html = '<div style="color:#8b949e">目前無班次數據</div>'; 
-                } else {
-                    etas.forEach(eta => {
-                        const etaTime = eta.eta ? new Date(eta.eta).toTimeString().substring(0, 5) : '未知';
-                        const rmk = eta.rmk_tc ? ` (${eta.rmk_tc})` : '';
-                        html += `
-                            <div class="eta-box">
-                                <div class="route-info">
-                                    <span class="route-name">往 ${eta.dest_tc}${rmk}</span>
-                                    <span class="stop-name">📍 屯門站總站</span>
-                                </div>
-                                <span class="eta-time">${etaTime}</span>
-                            </div>`;
-                    });
-                }
-                document.getElementById('bus-a33x-container').innerHTML = html;
-            } catch(e) { document.getElementById('bus-a33x-container').innerText = '數據加載失敗'; }
-
-            try {
-                const resE37 = await fetch('https://data.etabus.gov.hk/v1/transport/kmb/route-eta/E37/1');
-                const dataE37 = await resE37.json();
-                const etasE37 = dataE37.data.filter(item => item.seq === 1 || item.seq === 2).slice(0, 2);
-                
-                let htmlE37 = '';
-                if(!etasE37 || etasE37.length === 0 || !etasE37[0].eta) { 
-                    htmlE37 = '<div style="color:#8b949e">目前無班次數據</div>'; 
-                } else {
-                    etasE37.forEach(eta => {
-                        const etaTime = eta.eta ? new Date(eta.eta).toTimeString().substring(0, 5) : '未知';
-                        const rmk = eta.rmk_tc ? ` (${eta.rmk_tc})` : '';
-                        htmlE37 += `
-                            <div class="eta-box">
-                                <div class="route-info">
-                                    <span class="route-name">往 ${eta.dest_tc}${rmk}</span>
-                                    <span class="stop-name">📍 天水圍市中心</span>
-                                </div>
-                                <span class="eta-time">${etaTime}</span>
-                            </div>`;
-                    });
-                }
-                document.getElementById('bus-e37-container').innerHTML = htmlE37;
-            } catch(e) { document.getElementById('bus-e37-container').innerText = '數據加載失敗'; }
-        }
-        fetchBusEta();
-        setInterval(fetchBusEta, 30000);
-
-        // 9. 港鐵 API
-        async function fetchMtrEta() {
-            const line = 'TML'; 
-            const sta = 'TUM';  
-            try {
-                const res = await fetch(`https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php?line=${line}&sta=${sta}&lang=TC`);
-                const data = await res.json();
-                
-                let depHtml = '';
-
-                if (data.status === 1 && data.data && data.data[`${line}-${sta}`]) {
-                    const stationData = data.data[`${line}-${sta}`];
-                    const upTrains = stationData.UP || [];
-                    const downTrains = stationData.DOWN || [];
-
-                    let departureList = [...upTrains, ...downTrains].filter(t => t.dest !== 'TUM');
-                    departureList.sort((a, b) => parseInt(a.ttnt || 0) - parseInt(b.ttnt || 0));
-
-                    if (departureList.length > 0) {
-                        departureList.slice(0, 2).forEach(train => {
-                            const min = (train.ttnt && train.ttnt !== "0") ? `${train.ttnt} 分鐘` : '即將開出';
-                            let dest = (train.dest === 'WKS' || !train.dest) ? '烏溪沙' : train.dest;
-                            const plat = train.plat || '1';
-                            depHtml += `<div class="eta-box mtr-box"><span class="route-name">往 ${dest} (${plat}號月台)</span><span class="eta-time">${min}</span></div>`;
-                        });
-                    }
-                }
-                
-                document.getElementById('mtr-departures-container').innerHTML = depHtml || '<div style="color:#8b949e; font-size:0.85rem;">目前無出發班次</div>';
-            } catch(e) {
-                console.error("MTR error:", e);
-                document.getElementById('mtr-departures-container').innerText = '數據加載失敗';
-            }
-        }
-        fetchMtrEta();
-        setInterval(fetchMtrEta, 30000);
-
-        // 10. 電台播放功能 (直連播放)
-        function playRadio(url) {
-            var player = document.getElementById('audio-player');
-            if (!player) return;
-
-            player.pause();
-            player.src = url;
-            player.load();
-            
-            var playPromise = player.play();
-            if (playPromise !== undefined) {
-                playPromise.catch(function(error) {
-                    console.log("Auto-play prevented or network issue:", error);
-                    alert("請點擊下方播放器內部的「播放 ▶️」按鈕開始收聽。");
-                });
-            }
-        }
+            // 每 5 分鐘自動背景更新一次 (300,000 毫秒)
+            setInterval(loadDashboardData, 300000);
+        });
     </script>
 </body>
 </html>
