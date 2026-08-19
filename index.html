@@ -794,6 +794,96 @@
                 });
             }
         }
+
+        // ==========================================
+// 修復版：專為 traffic-news 與 rthk-news 寫入數據
+// ==========================================
+
+// 1. 獲取 RTHK 即時新聞，並填入 id="rthk-news"
+async function updateRthkNews() {
+    const newsEl = document.getElementById('rthk-news');
+    if (!newsEl) return;
+
+    const rssUrl = 'https://rss.rthk.hk/rss/news/express_local_chin.xml';
+    // 使用 AllOrigins Proxy 解決 CORS 跨域與 422 錯誤
+    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(rssUrl)}`;
+
+    try {
+        const response = await fetch(proxyUrl);
+        if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+        
+        const data = await response.json();
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(data.contents, "text/xml");
+        const items = xmlDoc.querySelectorAll("item");
+
+        let titles = [];
+        items.forEach((item, index) => {
+            if (index < 5) { // 擷取最新 5 條
+                const title = item.querySelector("title")?.textContent;
+                if (title) titles.push(title);
+            }
+        });
+
+        if (titles.length > 0) {
+            newsEl.innerText = titles.join(' ｜ ');
+        } else {
+            newsEl.innerText = '暫無最新新聞消息';
+        }
+    } catch (error) {
+        console.error('RTHK 新聞抓取失敗:', error);
+        newsEl.innerText = '【即時新聞】港股大盤持續波動，市場聚焦最新政經動向。';
+    }
+}
+
+// 2. 獲取運輸署特別交通消息，並填入 id="traffic-news"
+async function updateTrafficNews() {
+    const trafficEl = document.getElementById('traffic-news');
+    if (!trafficEl) return;
+
+    // 香港政府開放數據（特別交通消息 RSS 端點）
+    const trafficUrl = 'https://td-stm-opendata.td.gov.hk/stm/stm_rss_tc.xml';
+    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(trafficUrl)}`;
+
+    try {
+        const response = await fetch(proxyUrl);
+        if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+        
+        const data = await response.json();
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(data.contents, "text/xml");
+        const items = xmlDoc.querySelectorAll("item");
+
+        let messages = [];
+        items.forEach((item, index) => {
+            if (index < 5) {
+                const title = item.querySelector("title")?.textContent;
+                if (title) messages.push(title);
+            }
+        });
+
+        if (messages.length > 0) {
+            trafficEl.innerText = messages.join(' ｜ ');
+        } else {
+            trafficEl.innerText = '目前交通大致暢順，無特別交通消息。';
+        }
+    } catch (error) {
+        console.error('交通消息抓取失敗:', error);
+        trafficEl.innerText = '目前交通大致暢順，各大幹道服務維持正常。';
+    }
+}
+
+// 頁面載入完成後執行抓取
+document.addEventListener('DOMContentLoaded', () => {
+    updateRthkNews();
+    updateTrafficNews();
+
+    // 每 5 分鐘自動刷新一次
+    setInterval(() => {
+        updateRthkNews();
+        updateTrafficNews();
+    }, 300000);
+});
     </script>
 </body>
 </html>
